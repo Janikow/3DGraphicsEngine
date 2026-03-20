@@ -14,8 +14,6 @@
 html,body{width:100%;height:100%;background:var(--bg);color:var(--text);
   font-family:'Share Tech Mono',monospace;overflow:hidden;user-select:none;}
 canvas#three{display:block;position:fixed;inset:0;width:100%;height:100%;}
-
-/* HUD */
 #hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;}
 #top-bar{display:flex;align-items:stretch;pointer-events:all;
   background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -35,7 +33,6 @@ h1.logo{font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:.12em;
   cursor:pointer;letter-spacing:.04em;transition:all .15s;text-transform:uppercase;}
 .tool-btn:hover,.tool-btn.active{border-color:var(--accent3);color:var(--accent3);}
 .tool-btn.red:hover{border-color:var(--accent2);color:var(--accent2);}
-
 #mid{display:flex;flex:1;overflow:hidden;pointer-events:none;}
 #side{width:200px;background:var(--panel);border-right:1px solid var(--border);
   pointer-events:all;overflow-y:auto;flex-shrink:0;}
@@ -66,13 +63,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
 .abtn:hover{background:rgba(0,255,231,.09);box-shadow:0 0 8px var(--accent);}
 .abtn.d{border-color:var(--accent2);color:var(--accent2);}
 .abtn.d:hover{background:rgba(255,77,109,.09);}
-
 #status{pointer-events:all;background:var(--panel);border-top:1px solid var(--border);
   display:flex;align-items:center;gap:16px;padding:5px 14px;font-size:10px;color:var(--dim);flex-shrink:0;}
 #status b{color:var(--accent3);}
 .hint kbd{background:rgba(255,255,255,.07);border:1px solid var(--dim);
   border-radius:3px;padding:1px 4px;color:var(--text);font-size:9px;margin:0 1px;}
-
 #toast{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);
   background:rgba(0,255,231,.09);border:1px solid var(--accent);color:var(--accent);
   font-size:11px;padding:5px 16px;letter-spacing:.1em;opacity:0;transition:opacity .3s;pointer-events:none;}
@@ -81,7 +76,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
 <body>
 <canvas id="three"></canvas>
 <div id="toast"></div>
-
 <div id="hud">
   <div id="top-bar">
     <div id="logo"><h1 class="logo">GRAVITAS</h1><div class="sub">PHYSICS SANDBOX</div></div>
@@ -100,10 +94,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
       <button class="tool-btn red" id="btn-clear">✕ Clear</button>
     </div>
   </div>
-
   <div id="mid">
     <div id="side">
-
       <!-- SPAWN -->
       <div class="tab-content active psec" id="tab-spawn">
         <div class="slabel">Objects</div>
@@ -128,25 +120,24 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
         <button class="abtn" id="btn-drop">⬡ Drop Object</button>
         <button class="abtn" id="btn-rain">☂ Object Rain</button>
       </div>
-
       <!-- PHYSICS -->
       <div class="tab-content psec" id="tab-physics">
         <div class="slabel">World</div>
         <div class="srow">
-          <label>Gravity <span id="val-gravity">9.8</span></label>
-          <input type="range" id="sl-gravity" min="0" max="30" step="0.2" value="9.8">
+          <label>Gravity <span id="val-gravity">14</span></label>
+          <input type="range" id="sl-gravity" min="0" max="40" step="0.5" value="14">
         </div>
         <div class="srow">
-          <label>Bounce <span id="val-bounce">0.5</span></label>
-          <input type="range" id="sl-bounce" min="0" max="1" step="0.01" value="0.5">
+          <label>Bounce <span id="val-bounce">0.3</span></label>
+          <input type="range" id="sl-bounce" min="0" max="1" step="0.01" value="0.3">
         </div>
         <div class="srow">
-          <label>Friction <span id="val-friction">0.88</span></label>
-          <input type="range" id="sl-friction" min="0.5" max="1" step="0.01" value="0.88">
+          <label>Friction <span id="val-friction">0.82</span></label>
+          <input type="range" id="sl-friction" min="0.5" max="1" step="0.01" value="0.82">
         </div>
         <div class="srow">
-          <label>Air Drag <span id="val-drag">0.012</span></label>
-          <input type="range" id="sl-drag" min="0" max="0.12" step="0.002" value="0.012">
+          <label>Air Drag <span id="val-drag">0.01</span></label>
+          <input type="range" id="sl-drag" min="0" max="0.12" step="0.002" value="0.01">
         </div>
         <br>
         <div class="slabel">Environment</div>
@@ -155,11 +146,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
         <button class="abtn" id="btn-zerog">Zero-G Toggle</button>
         <button class="abtn d" id="btn-nuke">💥 Nuke Scene</button>
       </div>
-
       <!-- CONNECT -->
       <div class="tab-content psec" id="tab-connect">
         <div class="slabel">🔗 Link Tool</div>
-        <p style="font-size:9px;color:var(--dim);line-height:1.6;margin-bottom:8px;">Select <b style="color:var(--accent)">🔗 Link</b> tool then click two objects to connect them. Use <b style="color:var(--accent)">✂️ Cut</b> to sever.</p>
+        <p style="font-size:9px;color:var(--dim);line-height:1.6;margin-bottom:8px;">Select <b style="color:var(--accent)">🔗 Link</b> then click two objects. Use <b style="color:var(--accent)">✂️ Cut</b> to sever.</p>
         <div class="srow">
           <label>Rest Length <span id="val-link-rest">Auto</span></label>
           <input type="range" id="sl-link-rest" min="0" max="8" step="0.1" value="0">
@@ -184,10 +174,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
         <button class="abtn" id="btn-pin-toggle">📌 Pin to Air</button>
         <button class="abtn d" id="btn-cut-all">✂️ Cut All Links</button>
         <br>
-        <div style="font-size:10px;color:var(--dim);">Active links: <b id="stat-links" style="color:var(--accent3)">0</b></div>
+        <div style="font-size:10px;color:var(--dim);">Links: <b id="stat-links" style="color:var(--accent3)">0</b></div>
         <div style="font-size:9px;color:var(--dim);margin-top:5px;line-height:1.5;" id="link-status">No object selected</div>
       </div>
-
       <!-- HUMAN -->
       <div class="tab-content psec" id="tab-human">
         <div class="slabel">Ragdoll</div>
@@ -197,32 +186,26 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
         <br>
         <div class="slabel">Joint Settings</div>
         <div class="srow">
-          <label>Stiffness <span id="val-stiff">200</span></label>
-          <input type="range" id="sl-stiff" min="20" max="600" step="10" value="200">
+          <label>Joint Stiffness <span id="val-stiff">12</span></label>
+          <input type="range" id="sl-stiff" min="1" max="30" step="1" value="12">
         </div>
         <div class="srow">
-          <label>Damping <span id="val-damp">14</span></label>
-          <input type="range" id="sl-damp" min="1" max="50" step="1" value="14">
-        </div>
-        <div class="srow">
-          <label>Limb Mass <span id="val-mass">1.0</span></label>
-          <input type="range" id="sl-mass" min="0.2" max="5" step="0.1" value="1.0">
+          <label>Damping <span id="val-damp">0.88</span></label>
+          <input type="range" id="sl-damp" min="0.5" max="1.0" step="0.01" value="0.88">
         </div>
         <br>
         <div class="slabel">Pose</div>
         <button class="abtn" id="btn-floppy">😵 Go Floppy</button>
-        <button class="abtn" id="btn-tpose">🧍 Stiffen Up</button>
-        <button class="abtn d" id="btn-explode-rag">💥 Explode Joints</button>
+        <button class="abtn" id="btn-stiffen">🧍 Stiffen Up</button>
+        <button class="abtn d" id="btn-explode-rag">💥 Explode</button>
       </div>
-
     </div>
   </div>
-
   <div id="status">
     <span>Bodies: <b id="stat-obj">0</b></span>
     <span>FPS: <b id="stat-fps">0</b></span>
-    <span>Gravity: <b id="stat-g">9.8</b> m/s²</span>
-    <span class="hint"><kbd>WASD</kbd>Move <kbd>RMB</kbd>Look <kbd>Scroll</kbd>Zoom <kbd>LMB</kbd>Grab/Launch <kbd>1-5</kbd>Tools <kbd>H</kbd>Human <kbd>G</kbd>Gravity <kbd>C</kbd>Clear</span>
+    <span>Gravity: <b id="stat-g">14</b></span>
+    <span class="hint"><kbd>WASD</kbd>Move <kbd>RMB</kbd>Look <kbd>Scroll</kbd>Zoom <kbd>LMB</kbd>Grab/Launch <kbd>1-5</kbd>Tools <kbd>H</kbd>Human <kbd>G</kbd>Gravity <kbd>C</kbd>Clear <kbd>P</kbd>Pin</span>
   </div>
 </div>
 
@@ -230,13 +213,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
 <script>
 'use strict';
 
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  RENDERER
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 const canvas = document.getElementById('three');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -245,265 +228,223 @@ renderer.setClearColor(0x070a0f);
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x070a0f, 0.013);
-
 const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 600);
 
-// ── Lights ──
-scene.add(new THREE.AmbientLight(0x112233, 0.75));
-const sun = new THREE.DirectionalLight(0xfff0dd, 1.5);
-sun.position.set(25, 50, 20);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, {left:-50,right:50,top:50,bottom:-50,near:.1,far:250});
-sun.shadow.bias = -0.001;
-scene.add(sun);
-const fillL = new THREE.PointLight(0x0033ff, 0.65, 90); fillL.position.set(-20,8,-12); scene.add(fillL);
-const rimL  = new THREE.PointLight(0x00ffe7, 0.4, 70);  rimL.position.set(12,18,-22);  scene.add(rimL);
+// Lights
+scene.add(new THREE.AmbientLight(0x223344, 0.9));
+const sun = new THREE.DirectionalLight(0xfff8ee, 1.6);
+sun.position.set(20,50,18); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-50,right:50,top:50,bottom:-50,near:.1,far:250});
+sun.shadow.bias=-0.001; scene.add(sun);
+const fillL=new THREE.PointLight(0x2244ff,0.6,80); fillL.position.set(-18,6,-10); scene.add(fillL);
+const rimL =new THREE.PointLight(0x00ffe7,0.35,60); rimL.position.set(10,16,-20);  scene.add(rimL);
 
-// ── Floor ──
-const FLOOR_Y = -8, ARENA = 60, HALF = ARENA/2 - 0.8;
-const floorMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(ARENA, ARENA, 40, 40),
-  new THREE.MeshStandardMaterial({color:0x0c1820, roughness:.95, metalness:.05})
-);
-floorMesh.rotation.x = -Math.PI/2; floorMesh.position.y = FLOOR_Y;
-floorMesh.receiveShadow = true; scene.add(floorMesh);
-const grid = new THREE.GridHelper(ARENA, 30, 0x00ffe7, 0x091e2a);
-grid.position.y = FLOOR_Y + .01; scene.add(grid);
+// Floor / Grid
+const FLOOR_Y=-8, ARENA=60, HALF=ARENA/2-0.8;
+const floorMesh=new THREE.Mesh(
+  new THREE.PlaneGeometry(ARENA,ARENA,40,40),
+  new THREE.MeshStandardMaterial({color:0x0c1820,roughness:.95,metalness:.05}));
+floorMesh.rotation.x=-Math.PI/2; floorMesh.position.y=FLOOR_Y;
+floorMesh.receiveShadow=true; scene.add(floorMesh);
+const grid=new THREE.GridHelper(ARENA,30,0x00ffe7,0x091e2a);
+grid.position.y=FLOOR_Y+.01; scene.add(grid);
 
-// ── Walls ──
-const wallMeshes = [];
-[[0,FLOOR_Y+15,-ARENA/2,0,0,0],[0,FLOOR_Y+15,ARENA/2,0,Math.PI,0],
- [-ARENA/2,FLOOR_Y+15,0,0,Math.PI/2,0],[ARENA/2,FLOOR_Y+15,0,0,-Math.PI/2,0]
-].forEach(([x,y,z,rx,ry])=>{
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(ARENA, 30),
-    new THREE.MeshStandardMaterial({color:0x050c16,transparent:true,opacity:.25,side:THREE.DoubleSide})
-  );
-  m.position.set(x,y,z); m.rotation.set(rx,ry,0); m.visible=false;
+// Walls
+const wallMeshes=[];
+[[0,FLOOR_Y+15,-ARENA/2,0,0],[0,FLOOR_Y+15,ARENA/2,0,Math.PI],
+ [-ARENA/2,FLOOR_Y+15,0,0,Math.PI/2],[ARENA/2,FLOOR_Y+15,0,0,-Math.PI/2]
+].forEach(([x,y,z,ry1,ry2])=>{
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(ARENA,30),
+    new THREE.MeshStandardMaterial({color:0x050c16,transparent:true,opacity:.25,side:THREE.DoubleSide}));
+  m.position.set(x,y,z); m.rotation.set(0,ry2,0); m.visible=false;
   scene.add(m); wallMeshes.push(m);
 });
 
-// ════════════════════════════════════════════
-//  PHYSICS
-// ════════════════════════════════════════════
-let gravity=9.8, bounce=0.5, friction=0.88, airDrag=0.012;
+// ════════════════════════════════════════════════════════
+//  PHYSICS — XPBD-style position-correction solver
+//  Each body has: pos (vec3), vel (vec3), mass, invMass
+//  Constraints correct positions directly then fix velocities
+// ════════════════════════════════════════════════════════
+let gravity=14, bounce=0.3, friction=0.82, airDrag=0.01;
 let floorOn=true, wallsOn=false, simTime=0;
 
-const bodies  = [];   // RigidBody[]
-const springs = [];   // Spring[]
-const ragdolls= [];   // Ragdoll[]
+const bodies   = [];   // PhysBody[]
+const ragdolls = [];   // Ragdoll[]
+const userLinks= [];   // UserLink[]
 
-// ── RigidBody ──
-class RigidBody {
+class PhysBody {
   constructor(mesh, radius, mass=1) {
-    this.mesh   = mesh;
-    this.radius = radius;
-    this.mass   = mass;
-    this.vel    = new THREE.Vector3();
-    this.angVel = new THREE.Vector3();
-    this.pinned = false;
-    this.ragId  = -1;   // -1 = not a ragdoll limb
-    this.trail  = null;
+    this.mesh    = mesh;
+    this.radius  = radius;
+    this.mass    = mass;
+    this.invMass = mass>0 ? 1/mass : 0;
+    this.vel     = new THREE.Vector3();
+    this.angVel  = new THREE.Vector3();
+    this.pinned  = false;
+    this.ragId   = -1;
+    this.trail   = null;
   }
   get pos(){ return this.mesh.position; }
 }
 
-// ── Spring constraint ──
-class Spring {
-  constructor(a, b, rest, k, d) {
-    this.a=a; this.b=b; this.rest=rest; this.k=k; this.d=d;
-  }
-  apply(dt) {
-    const diff = new THREE.Vector3().subVectors(this.b.pos, this.a.pos);
-    const dist = diff.length(); if(dist<0.0001) return;
-    const stretch = dist - this.rest;
-    const dir = diff.divideScalar(dist);
-    const relV = new THREE.Vector3().subVectors(this.b.vel, this.a.vel).dot(dir);
-    const f = this.k*stretch + this.d*relV;
-    if(!this.a.pinned) this.a.vel.addScaledVector(dir,  f*dt/this.a.mass);
-    if(!this.b.pinned) this.b.vel.addScaledVector(dir, -f*dt/this.b.mass);
-  }
-}
-
 // ── Trail ──
 class Trail {
-  constructor(color) {
-    this.pts=[]; this.max=22;
-    this.geo = new THREE.BufferGeometry();
-    this.mat = new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:.32});
-    this.line= new THREE.Line(this.geo,this.mat); scene.add(this.line);
+  constructor(color){
+    this.pts=[]; this.max=20;
+    this.geo=new THREE.BufferGeometry();
+    this.mat=new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:.28});
+    this.line=new THREE.Line(this.geo,this.mat); scene.add(this.line);
   }
-  update(pos) {
-    this.pts.push(pos.clone());
+  update(p){
+    this.pts.push(p.clone());
     if(this.pts.length>this.max) this.pts.shift();
-    const arr=new Float32Array(this.pts.length*3);
-    this.pts.forEach((p,i)=>{arr[i*3]=p.x;arr[i*3+1]=p.y;arr[i*3+2]=p.z;});
-    this.geo.setAttribute('position',new THREE.BufferAttribute(arr,3));
+    const a=new Float32Array(this.pts.length*3);
+    this.pts.forEach((v,i)=>{a[i*3]=v.x;a[i*3+1]=v.y;a[i*3+2]=v.z;});
+    this.geo.setAttribute('position',new THREE.BufferAttribute(a,3));
   }
   dispose(){ scene.remove(this.line); this.geo.dispose(); this.mat.dispose(); }
 }
 
-// ── Remove helper ──
-function removeBodyAt(idx) {
+function removeBodyAt(idx){
   const b=bodies[idx];
   if(b.trail) b.trail.dispose();
   b.mesh.geometry.dispose(); b.mesh.material.dispose(); scene.remove(b.mesh);
-  // remove any user links attached to this body
   for(let i=userLinks.length-1;i>=0;i--){
-    const lk=userLinks[i];
-    if(lk.a===b||lk.b===b){ removeUserLink(i); }
+    if(userLinks[i].a===b||userLinks[i].b===b) removeUserLink(i);
   }
   bodies.splice(idx,1);
 }
 
-// ════════════════════════════════════════════
-//  USER LINKS (constraints between objects)
-// ════════════════════════════════════════════
-const userLinks = [];  // {spring, line, geo, mat, ropeOnly, pinBody}
-let linkA = null;      // first selected body for linking
-let linkColor = '#f5c518';
-let linkK = 120, linkD = 8, linkRestOverride = 0, ropeMode = false;
+// ════════════════════════════════════════════════════════
+//  USER LINKS
+// ════════════════════════════════════════════════════════
+let linkA=null, linkColor='#f5c518', linkK=120, linkD=8, linkRestOverride=0, ropeMode=false;
 
-function updateLinkStatus() {
-  document.getElementById('stat-links').textContent = userLinks.length;
-  const el = document.getElementById('link-status');
-  if(activeTool==='link') {
-    el.textContent = linkA ? `1st: selected — click 2nd object` : 'Click an object to start link';
-  } else if(activeTool==='cut') {
-    el.textContent = 'Click an object to cut its links';
-  } else {
-    el.textContent = userLinks.length ? `${userLinks.length} link(s) active` : 'No links';
-  }
+function updateLinkStatus(){
+  document.getElementById('stat-links').textContent=userLinks.length;
+  const el=document.getElementById('link-status');
+  if(activeTool==='link') el.textContent=linkA?'1st selected — click 2nd':'Click an object to start';
+  else if(activeTool==='cut') el.textContent='Click an object to cut links';
+  else el.textContent=userLinks.length?`${userLinks.length} link(s) active`:'No links';
 }
 
-function createUserLink(a, b) {
-  const dist = a.pos.distanceTo(b.pos);
-  const rest = linkRestOverride > 0 ? linkRestOverride : dist;
-  const sp = new Spring(a, b, rest, linkK, linkD);
-  sp.ropeOnly = ropeMode;
-  springs.push(sp);
-
-  // Visual rope
-  const geo = new THREE.BufferGeometry();
-  const pts = new Float32Array(6); // 2 points × 3
-  geo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-  const mat = new THREE.LineBasicMaterial({
-    color: new THREE.Color(linkColor), linewidth: 2,
-    transparent: true, opacity: 0.85
-  });
-  const line = new THREE.Line(geo, mat);
-  scene.add(line);
-
-  userLinks.push({spring:sp, line, geo, mat, a, b});
+function createUserLink(a,b){
+  const rest=linkRestOverride>0?linkRestOverride:a.pos.distanceTo(b.pos);
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));
+  const mat=new THREE.LineBasicMaterial({color:new THREE.Color(linkColor),transparent:true,opacity:.85});
+  const line=new THREE.Line(geo,mat); scene.add(line);
+  userLinks.push({a,b,rest,k:linkK,d:linkD,rope:ropeMode,geo,mat,line});
   updateLinkStatus();
 }
 
-function removeUserLink(idx) {
-  const lk = userLinks[idx];
-  const si = springs.indexOf(lk.spring); if(si>=0) springs.splice(si,1);
+function removeUserLink(idx){
+  const lk=userLinks[idx];
   scene.remove(lk.line); lk.geo.dispose(); lk.mat.dispose();
-  userLinks.splice(idx,1);
-  updateLinkStatus();
+  userLinks.splice(idx,1); updateLinkStatus();
 }
 
-function cutLinksOnBody(b) {
-  for(let i=userLinks.length-1;i>=0;i--){
+function cutLinksOnBody(b){
+  for(let i=userLinks.length-1;i>=0;i--)
     if(userLinks[i].a===b||userLinks[i].b===b) removeUserLink(i);
-  }
 }
 
-function updateLinkVisuals() {
+function updateLinkVisuals(){
   userLinks.forEach(lk=>{
-    const pa=lk.a.pos, pb=lk.b.pos;
-    const arr=lk.geo.attributes.position.array;
+    const pa=lk.a.pos,pb=lk.b.pos,arr=lk.geo.attributes.position.array;
     arr[0]=pa.x;arr[1]=pa.y;arr[2]=pa.z;
     arr[3]=pb.x;arr[4]=pb.y;arr[5]=pb.z;
     lk.geo.attributes.position.needsUpdate=true;
-
-    // Color rope by tension
-    const dist=pa.distanceTo(pb);
-    const tension=Math.max(0, dist-lk.spring.rest)/Math.max(lk.spring.rest,0.01);
-    const t=Math.min(tension,1);
-    lk.mat.color.setRGB(.2+t*.8, .9-t*.7, .5-t*.4);
+    const t=Math.min(Math.max(0,(pa.distanceTo(pb)-lk.rest)/Math.max(lk.rest,.01)),1);
+    lk.mat.color.setRGB(.2+t*.8,.9-t*.7,.5-t*.4);
   });
 }
 
-// Override Spring.apply to support rope mode
-const _origApply = Spring.prototype.apply;
-Spring.prototype.apply = function(dt) {
-  if(this.ropeOnly) {
-    // Pull-only: only apply force when stretched beyond rest
-    const diff = new THREE.Vector3().subVectors(this.b.pos, this.a.pos);
-    const dist = diff.length(); if(dist<0.0001) return;
-    if(dist <= this.rest) return; // slack — no force
-    const stretch = dist - this.rest;
-    const dir = diff.divideScalar(dist);
-    const relV = new THREE.Vector3().subVectors(this.b.vel, this.a.vel).dot(dir);
-    const f = this.k*stretch + this.d*relV;
-    if(!this.a.pinned) this.a.vel.addScaledVector(dir,  f*dt/this.a.mass);
-    if(!this.b.pinned) this.b.vel.addScaledVector(dir, -f*dt/this.b.mass);
-  } else {
-    _origApply.call(this, dt);
-  }
-};
+// ════════════════════════════════════════════════════════
+//  PHYSICS STEP  (sub-stepped Verlet + position correction)
+// ════════════════════════════════════════════════════════
+const SUB=6; // sub-steps — key to stable rigid joints
 
-// ── Physics step  (sub-stepped for stability) ──
-function physicsStep(dt) {
-  const SUB = 3;                       // sub-steps per frame
-  const sdt = Math.min(dt, 0.032) / SUB;
-  simTime += dt;
+function physicsStep(dt){
+  dt=Math.min(dt,.033);
+  simTime+=dt;
+  const sdt=dt/SUB;
 
-  for(let sub=0; sub<SUB; sub++){
-    springs.forEach(s=>s.apply(sdt));
-
-    for(let i=bodies.length-1;i>=0;i--) {
-      const b=bodies[i];
+  for(let sub=0;sub<SUB;sub++){
+    // 1. Integrate velocities
+    for(const b of bodies){
       if(b.pinned) continue;
-
-      b.vel.y -= gravity*sdt;
-      b.vel.multiplyScalar(1 - airDrag/SUB);
-      b.angVel.multiplyScalar(1 - (1-.985)/SUB);
-
+      b.vel.y-=gravity*sdt;
+      b.vel.multiplyScalar(1-airDrag);
+      b.angVel.multiplyScalar(.97);
       b.pos.addScaledVector(b.vel,sdt);
-      b.mesh.rotation.x += b.angVel.x*sdt;
-      b.mesh.rotation.y += b.angVel.y*sdt;
-      b.mesh.rotation.z += b.angVel.z*sdt;
+      b.mesh.rotation.x+=b.angVel.x*sdt;
+      b.mesh.rotation.y+=b.angVel.y*sdt;
+      b.mesh.rotation.z+=b.angVel.z*sdt;
+    }
 
+    // 2. Position constraints — ragdoll pivot joints
+    for(const rag of ragdolls){
+      const iters = rag.stiffIters; // iterations scale with stiffness
+      for(let it=0;it<iters;it++){
+        for(const c of rag.constraints){
+          solveDistConstraint(c.a, c.b, c.rest, 1.0);
+        }
+      }
+    }
+
+    // 3. User link springs (soft)
+    for(const lk of userLinks){
+      const diff=new THREE.Vector3().subVectors(lk.b.pos,lk.a.pos);
+      const dist=diff.length(); if(dist<.0001) continue;
+      if(lk.rope && dist<=lk.rest) continue;
+      const stretch=dist-lk.rest;
+      const dir=diff.divideScalar(dist);
+      const relV=new THREE.Vector3().subVectors(lk.b.vel,lk.a.vel).dot(dir);
+      const f=(lk.k*stretch+lk.d*relV)*sdt;
+      if(!lk.a.pinned) lk.a.vel.addScaledVector(dir, f/lk.a.mass);
+      if(!lk.b.pinned) lk.b.vel.addScaledVector(dir,-f/lk.b.mass);
+    }
+
+    // 4. Floor / wall collisions
+    for(let i=bodies.length-1;i>=0;i--){
+      const b=bodies[i]; if(b.pinned) continue;
       const r=b.radius;
-      if(floorOn && b.pos.y-r < FLOOR_Y) {
+      if(floorOn && b.pos.y-r<FLOOR_Y){
         b.pos.y=FLOOR_Y+r;
-        b.vel.y*=-bounce;
-        b.vel.x*=friction; b.vel.z*=friction;
+        if(b.vel.y<0){ b.vel.y*=-bounce; b.vel.x*=friction; b.vel.z*=friction; }
         b.angVel.multiplyScalar(friction);
-        if(Math.abs(b.vel.y)<0.28) b.vel.y=0;
+        if(Math.abs(b.vel.y)<.15) b.vel.y=0;
       }
       if(wallsOn){
-        if(b.pos.x-r<-HALF){b.pos.x=-HALF+r;b.vel.x*=-bounce;}
-        if(b.pos.x+r> HALF){b.pos.x= HALF-r;b.vel.x*=-bounce;}
-        if(b.pos.z-r<-HALF){b.pos.z=-HALF+r;b.vel.z*=-bounce;}
-        if(b.pos.z+r> HALF){b.pos.z= HALF-r;b.vel.z*=-bounce;}
+        if(b.pos.x-r<-HALF){b.pos.x=-HALF+r; if(b.vel.x<0)b.vel.x*=-bounce;}
+        if(b.pos.x+r> HALF){b.pos.x= HALF-r; if(b.vel.x>0)b.vel.x*=-bounce;}
+        if(b.pos.z-r<-HALF){b.pos.z=-HALF+r; if(b.vel.z<0)b.vel.z*=-bounce;}
+        if(b.pos.z+r> HALF){b.pos.z= HALF-r; if(b.vel.z>0)b.vel.z*=-bounce;}
       }
-      if(b.pos.y < FLOOR_Y-100){ removeBodyAt(i); updateStats(); continue; }
+      if(b.pos.y<FLOOR_Y-80){ removeBodyAt(i); updateStats(); continue; }
       if(b.trail) b.trail.update(b.pos);
     }
 
-    // body–body collision (skip same ragdoll)
+    // 5. Body–body collisions (skip same ragdoll)
     for(let i=0;i<bodies.length;i++){
       for(let j=i+1;j<bodies.length;j++){
-        const a=bodies[i],b2=bodies[j];
-        if(a.ragId>=0 && a.ragId===b2.ragId) continue;
-        const d=new THREE.Vector3().subVectors(a.pos,b2.pos);
-        const dist=d.length(), minD=a.radius+b2.radius;
-        if(dist<minD && dist>0.001){
-          const n=d.divideScalar(dist), ov=(minD-dist)*.5;
-          if(!a.pinned) a.pos.addScaledVector(n, ov);
-          if(!b2.pinned)b2.pos.addScaledVector(n,-ov);
-          const rv=a.vel.dot(n)-b2.vel.dot(n);
+        const a=bodies[i],b=bodies[j];
+        if(a.ragId>=0&&a.ragId===b.ragId) continue;
+        const d=new THREE.Vector3().subVectors(a.pos,b.pos);
+        const dist=d.length(),minD=a.radius+b.radius;
+        if(dist<minD&&dist>.001){
+          const n=d.divideScalar(dist),ov=(minD-dist)*.5;
+          const w1=a.pinned?0:a.invMass/(a.invMass+b.invMass);
+          const w2=b.pinned?0:b.invMass/(a.invMass+b.invMass);
+          if(!a.pinned) a.pos.addScaledVector(n,ov*(a.pinned?0:2*w1));
+          if(!b.pinned) b.pos.addScaledVector(n,-ov*(b.pinned?0:2*w2));
+          const rv=a.vel.dot(n)-b.vel.dot(n);
           if(rv<0){
-            const imp=rv*(-(1+bounce))*.5;
-            if(!a.pinned)  a.vel.addScaledVector(n, imp);
-            if(!b2.pinned) b2.vel.addScaledVector(n,-imp);
+            const imp=rv*(-(1+bounce))/(a.invMass+b.invMass);
+            if(!a.pinned) a.vel.addScaledVector(n, imp*a.invMass);
+            if(!b.pinned) b.vel.addScaledVector(n,-imp*b.invMass);
           }
         }
       }
@@ -511,9 +452,27 @@ function physicsStep(dt) {
   }
 }
 
-// ════════════════════════════════════════════
+// Hard distance constraint  (XPBD position correction)
+function solveDistConstraint(a, b, rest, compliance=1.0){
+  if(a.pinned&&b.pinned) return;
+  const d=new THREE.Vector3().subVectors(b.pos,a.pos);
+  const dist=d.length(); if(dist<.0001) return;
+  const err=dist-rest;
+  // compliance=1 → full correction each iter; <1 → softer
+  const corr=err/(a.invMass+b.invMass)*compliance;
+  const n=d.divideScalar(dist);
+  if(!a.pinned) a.pos.addScaledVector(n, corr*a.invMass);
+  if(!b.pinned) b.pos.addScaledVector(n,-corr*b.invMass);
+  // velocity correction (velocity along constraint axis)
+  const dv=new THREE.Vector3().subVectors(b.vel,a.vel).dot(n);
+  const damp=0.5;
+  if(!a.pinned) a.vel.addScaledVector(n, dv*damp*a.invMass);
+  if(!b.pinned) b.vel.addScaledVector(n,-dv*damp*b.invMass);
+}
+
+// ════════════════════════════════════════════════════════
 //  SPAWN OBJECTS
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 let selectedShape='sphere', selectedColor='#00ffe7', spawnScale=1;
 const COLORS=['#00ffe7','#ff4d6d','#f5c518','#8b5cf6','#22d3ee','#fb923c','#4ade80','#f472b6','#ffffff','#fbbf24'];
 
@@ -529,239 +488,304 @@ function makeGeo(shape,s){
   }
 }
 
-function spawnBody(pos, vel, shape, hexColor, scale=1, withTrail=true) {
+function spawnBody(pos,vel,shape,hexColor,scale=1){
   const col=new THREE.Color(hexColor);
-  const mat=new THREE.MeshStandardMaterial({
-    color:col, emissive:col, emissiveIntensity:.1, roughness:.4, metalness:.45
-  });
+  const mat=new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.1,roughness:.4,metalness:.45});
   const mesh=new THREE.Mesh(makeGeo(shape,scale),mat);
   mesh.castShadow=true; mesh.receiveShadow=true;
   mesh.position.copy(pos);
   mesh.rotation.set(Math.random()*Math.PI*2,Math.random()*Math.PI*2,Math.random()*Math.PI*2);
   scene.add(mesh);
-  const b=new RigidBody(mesh, .5*scale*(shape==='torus'?1.2:1));
+  const b=new PhysBody(mesh,.5*scale*(shape==='torus'?1.2:1));
   b.vel.copy(vel);
   b.angVel.set((Math.random()-.5)*6,(Math.random()-.5)*6,(Math.random()-.5)*6);
-  if(withTrail) b.trail=new Trail(hexColor);
-  bodies.push(b);
-  updateStats();
-  return b;
+  b.trail=new Trail(hexColor);
+  bodies.push(b); updateStats(); return b;
 }
 
-// ════════════════════════════════════════════
-//  RAGDOLL  (v2 — pose-spring + sub-step)
-// ════════════════════════════════════════════
-let jointK=320, jointD=22, limbMass=1.0;
+// ════════════════════════════════════════════════════════
+//  RAGDOLL  — People Playground style
+//
+//  Architecture:
+//  • Each segment is a PhysBody (sphere collision proxy)
+//  • Meshes are thick capsule-like cylinders + sphere joints
+//  • Constraints are hard distance constraints solved by
+//    position correction (XPBD), NOT springs
+//  • stiffIters controls how rigid the joints feel
+//  • A separate "bone" mesh (cylinder) is parented to
+//    nothing — updated each frame to stretch between nodes
+// ════════════════════════════════════════════════════════
 let ragIdCounter=0;
+let ragStiffIters=12;  // constraint solve iterations — higher = stiffer
+let ragDamping=0.88;   // velocity damping per sub-step on ragdoll bodies
 
-const C_SKIN=0xe8c49a, C_SHIRT=0x1e4488, C_PANTS=0x1a1a3a, C_SHOE=0x221111, C_HAIR=0x2a1a0a;
+// People Playground color palette
+const PP_SKIN ='#f5c5a3';
+const PP_SHIRT='#3a6fd8';
+const PP_PANTS='#2a2a60';
+const PP_SHOE ='#1a0e0e';
+const PP_HAIR ='#3b2410';
+const PP_JOINT='#c8d8e8';  // joint sphere color
 
-/* A PoseSpring keeps one body anchored relative to another body's coordinate
-   frame.  It fires a spring from bodyB's current world-pos toward the target
-   world-pos derived from bodyA's position + a local offset that rotates with
-   bodyA.  This stops limbs from flopping away from the torso even under load. */
-class PoseSpring {
-  constructor(parent, child, localOffset, k, d) {
-    this.parent = parent;       // reference body (e.g. torso)
-    this.child  = child;        // body being pulled (e.g. upper-arm)
-    this.offset = localOffset.clone(); // desired position relative to parent
-    this.k = k;
-    this.d = d;
-  }
-  apply(dt) {
-    // Rotate offset by parent's mesh quaternion
-    const worldTarget = this.offset.clone()
-      .applyQuaternion(this.parent.mesh.quaternion)
-      .add(this.parent.pos);
-    const diff = new THREE.Vector3().subVectors(worldTarget, this.child.pos);
-    const relV = new THREE.Vector3().subVectors(
-      this.parent.vel, this.child.vel); // velocity of target vs child
-    const force = diff.multiplyScalar(this.k).addScaledVector(relV, this.d);
-    if (!this.child.pinned)  this.child.vel.addScaledVector(force,  dt / this.child.mass);
-    if (!this.parent.pinned) this.parent.vel.addScaledVector(force, -dt / this.parent.mass);
-  }
+function makeSegMesh(color, rx=0,ry=0,rz=0){
+  // returns a group with a cylinder body — we'll resize it each frame
+  const mat=new THREE.MeshStandardMaterial({color:new THREE.Color(color),roughness:.65,metalness:.08});
+  const geo=new THREE.CylinderGeometry(1,1,1,12);
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.rotation.set(rx,ry,rz);
+  mesh.castShadow=true;
+  return mesh;
 }
 
-function makeLimb(geo, color, pos, rx=0,ry=0,rz=0, radius=.14, mass=null) {
-  const mat = new THREE.MeshStandardMaterial({color, roughness:.72, metalness:.06});
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.castShadow = true;
-  mesh.position.copy(pos);
-  mesh.rotation.set(rx, ry, rz);
-  scene.add(mesh);
-  const b = new RigidBody(mesh, radius, mass || limbMass);
-  b.isLimb = true;
-  return b;
+function makeJointMesh(r,color=PP_JOINT){
+  const mat=new THREE.MeshStandardMaterial({color:new THREE.Color(color),roughness:.5,metalness:.2,
+    emissive:new THREE.Color(color),emissiveIntensity:.08});
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(r,10,10),mat);
+  mesh.castShadow=true; scene.add(mesh); return mesh;
 }
 
-function spawnRagdoll(origin, opts={}) {
-  const id   = ragIdCounter++;
-  const ox=origin.x, oy=origin.y, oz=origin.z;
-  const falling = !!opts.falling;
+// Dynamically update a bone cylinder to stretch from posA to posB with given radius
+const _boneUp=new THREE.Vector3(0,1,0);
+const _boneQ =new THREE.Quaternion();
+function updateBoneMesh(mesh, posA, posB, radius){
+  const mid=new THREE.Vector3().addVectors(posA,posB).multiplyScalar(.5);
+  mesh.position.copy(mid);
+  const dir=new THREE.Vector3().subVectors(posB,posA);
+  const len=dir.length();
+  mesh.scale.set(radius*2, len, radius*2);
+  _boneQ.setFromUnitVectors(_boneUp, dir.divideScalar(len));
+  mesh.quaternion.copy(_boneQ);
+}
 
-  /* ── proportions: standing height ~3.6 units ── */
-  const S  = 1.0; // scale factor — tweak if needed
+function spawnRagdoll(origin, opts={}){
+  const id=ragIdCounter++;
+  const ox=origin.x, oz=origin.z;
 
-  // heights above origin
-  const Y_FOOT  = oy + 0.05*S;
-  const Y_ANKLE = oy + 0.12*S;
-  const Y_SHIN  = oy + 0.55*S;
-  const Y_KNEE  = oy + 1.02*S;
-  const Y_THIGH = oy + 1.42*S;
-  const Y_HIP   = oy + 1.82*S;
-  const Y_BELLY = oy + 2.18*S;
-  const Y_CHEST = oy + 2.60*S;
-  const Y_SHOULDER = oy + 2.85*S;
-  const Y_NECK  = oy + 3.05*S;
-  const Y_HEAD  = oy + 3.42*S;
-  const X_HIP   = 0.14*S;
-  const X_SHOULDER = 0.30*S;
-  const X_ELBOW = 0.58*S;
-  const X_HAND  = 0.82*S;
+  // ── node positions (world-space initial) ──
+  // Standing height ~3.5 units. Y-up, feet at oy=FLOOR_Y
+  const oy=FLOOR_Y;
+  const nodes={
+    lAnkle: new THREE.Vector3(ox-.14, oy+.10, oz),
+    rAnkle: new THREE.Vector3(ox+.14, oy+.10, oz),
+    lKnee:  new THREE.Vector3(ox-.14, oy+.80, oz),
+    rKnee:  new THREE.Vector3(ox+.14, oy+.80, oz),
+    lHip:   new THREE.Vector3(ox-.12, oy+1.52, oz),
+    rHip:   new THREE.Vector3(ox+.12, oy+1.52, oz),
+    pelvis: new THREE.Vector3(ox,     oy+1.62, oz),
+    spine1: new THREE.Vector3(ox,     oy+2.00, oz),
+    spine2: new THREE.Vector3(ox,     oy+2.38, oz),
+    lShldr: new THREE.Vector3(ox-.30, oy+2.60, oz),
+    rShldr: new THREE.Vector3(ox+.30, oy+2.60, oz),
+    lElbow: new THREE.Vector3(ox-.54, oy+2.28, oz),
+    rElbow: new THREE.Vector3(ox+.54, oy+2.28, oz),
+    lWrist: new THREE.Vector3(ox-.72, oy+1.96, oz),
+    rWrist: new THREE.Vector3(ox+.72, oy+1.96, oz),
+    neck:   new THREE.Vector3(ox,     oy+2.76, oz),
+    head:   new THREE.Vector3(ox,     oy+3.20, oz),
+  };
 
-  // ── feet ──
-  const lFoot = makeLimb(new THREE.BoxGeometry(.17*S,.09*S,.30*S), C_SHOE,
-    new THREE.Vector3(ox-X_HIP, Y_FOOT, oz+.06*S), 0,0,0, .10*S, .8);
-  const rFoot = makeLimb(new THREE.BoxGeometry(.17*S,.09*S,.30*S), C_SHOE,
-    new THREE.Vector3(ox+X_HIP, Y_FOOT, oz+.06*S), 0,0,0, .10*S, .8);
+  // masses — heavier core, lighter extremities
+  const nodeMass={
+    lAnkle:.6,rAnkle:.6, lKnee:.9,rKnee:.9,
+    lHip:1.2,rHip:1.2, pelvis:2.5, spine1:2.0,spine2:2.0,
+    lShldr:1.0,rShldr:1.0, lElbow:.7,rElbow:.7,
+    lWrist:.5,rWrist:.5, neck:.6, head:1.8
+  };
 
-  // ── shins ──
-  const lShin = makeLimb(new THREE.CylinderGeometry(.075*S,.085*S,.46*S,10), C_SKIN,
-    new THREE.Vector3(ox-X_HIP, Y_SHIN, oz), 0,0,0, .095*S, 1.2);
-  const rShin = makeLimb(new THREE.CylinderGeometry(.075*S,.085*S,.46*S,10), C_SKIN,
-    new THREE.Vector3(ox+X_HIP, Y_SHIN, oz), 0,0,0, .095*S, 1.2);
+  // create PhysBody for each node (invisible sphere proxy)
+  const nodeRadius={
+    lAnkle:.09,rAnkle:.09,lKnee:.10,rKnee:.10,
+    lHip:.10,rHip:.10,pelvis:.14,spine1:.13,spine2:.13,
+    lShldr:.10,rShldr:.10,lElbow:.08,rElbow:.08,
+    lWrist:.07,rWrist:.07,neck:.08,head:.22
+  };
 
-  // ── thighs ──
-  const lThigh = makeLimb(new THREE.CylinderGeometry(.10*S,.10*S,.46*S,10), C_PANTS,
-    new THREE.Vector3(ox-X_HIP, Y_THIGH, oz), 0,0,0, .11*S, 1.8);
-  const rThigh = makeLimb(new THREE.CylinderGeometry(.10*S,.10*S,.46*S,10), C_PANTS,
-    new THREE.Vector3(ox+X_HIP, Y_THIGH, oz), 0,0,0, .11*S, 1.8);
-
-  // ── pelvis ──
-  const pelvis = makeLimb(new THREE.BoxGeometry(.38*S,.26*S,.22*S), C_PANTS,
-    new THREE.Vector3(ox, Y_HIP, oz), 0,0,0, .22*S, 3.5);
-
-  // ── abdomen ──
-  const belly = makeLimb(new THREE.CylinderGeometry(.15*S,.18*S,.30*S,10), C_SKIN,
-    new THREE.Vector3(ox, Y_BELLY, oz), 0,0,0, .18*S, 2.0);
-
-  // ── chest ──
-  const chest = makeLimb(new THREE.BoxGeometry(.44*S,.38*S,.22*S), C_SHIRT,
-    new THREE.Vector3(ox, Y_CHEST, oz), 0,0,0, .26*S, 4.0);
-
-  // ── upper arms ──
-  const lUA = makeLimb(new THREE.CylinderGeometry(.075*S,.075*S,.36*S,8), C_SHIRT,
-    new THREE.Vector3(ox-X_ELBOW+.04*S, Y_SHOULDER-.04*S, oz), 0,0, Math.PI/2, .09*S, 1.0);
-  const rUA = makeLimb(new THREE.CylinderGeometry(.075*S,.075*S,.36*S,8), C_SHIRT,
-    new THREE.Vector3(ox+X_ELBOW-.04*S, Y_SHOULDER-.04*S, oz), 0,0, Math.PI/2, .09*S, 1.0);
-
-  // ── forearms ──
-  const lFA = makeLimb(new THREE.CylinderGeometry(.063*S,.063*S,.33*S,8), C_SKIN,
-    new THREE.Vector3(ox-X_HAND+.04*S, Y_SHOULDER-.04*S, oz), 0,0, Math.PI/2, .08*S, .8);
-  const rFA = makeLimb(new THREE.CylinderGeometry(.063*S,.063*S,.33*S,8), C_SKIN,
-    new THREE.Vector3(ox+X_HAND-.04*S, Y_SHOULDER-.04*S, oz), 0,0, Math.PI/2, .08*S, .8);
-
-  // ── neck ──
-  const neck = makeLimb(new THREE.CylinderGeometry(.065*S,.075*S,.20*S,8), C_SKIN,
-    new THREE.Vector3(ox, Y_NECK, oz), 0,0,0, .075*S, .5);
-
-  // ── head ──
-  const head = makeLimb(new THREE.SphereGeometry(.245*S,14,14), C_SKIN,
-    new THREE.Vector3(ox, Y_HEAD, oz), 0,0,0, .25*S, 2.0);
-
-  // head decorations
-  const hairMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(.25*S,12,7,0,Math.PI*2,0,Math.PI*.52),
-    new THREE.MeshStandardMaterial({color:C_HAIR, roughness:.9}));
-  hairMesh.position.set(0,.02*S,0); head.mesh.add(hairMesh);
-  const eyeGeo = new THREE.SphereGeometry(.038*S,6,6);
-  const eyeMat = new THREE.MeshStandardMaterial({color:0x111111});
-  const eL=new THREE.Mesh(eyeGeo,eyeMat); eL.position.set(-.085*S,.06*S,.22*S); head.mesh.add(eL);
-  const eR=new THREE.Mesh(eyeGeo,eyeMat); eR.position.set( .085*S,.06*S,.22*S); head.mesh.add(eR);
-  // simple mouth line
-  const mouthGeo=new THREE.BoxGeometry(.09*S,.012*S,.01*S);
-  const mouthMat=new THREE.MeshStandardMaterial({color:0x771111});
-  const mouth=new THREE.Mesh(mouthGeo,mouthMat); mouth.position.set(0,-.06*S,.24*S); head.mesh.add(mouth);
-
-  const limbs=[lFoot,rFoot,lShin,rShin,lThigh,rThigh,pelvis,belly,chest,lUA,rUA,lFA,rFA,neck,head];
-  limbs.forEach(lb=>{ lb.ragId=id; bodies.push(lb); });
-
-  /* ════════════════════════════════════════
-     JOINTS — two layers:
-     1. Distance springs  (structural / collisions)
-     2. PoseSprings       (keep limb in correct socket)
-     The combo gives stiff joints that resist wrenching apart while still
-     having the pose-correcting force that keeps a standing posture.
-  ════════════════════════════════════════ */
-  const K  = jointK;
-  const D  = jointD;
-  const KP = jointK * 1.4;   // pose springs are stiffer
-  const DP = jointD  * 1.2;
-  const JS = [];
-
-  function dist3(a,b){ return a.pos.distanceTo(b.pos); }
-  function addDist(a,b,slack=0){
-    const s=new Spring(a,b, dist3(a,b)+slack, K, D);
-    springs.push(s); JS.push(s); return s;
-  }
-  function addPose(parent, child, localOff){
-    const s=new PoseSpring(parent,child,localOff,KP,DP);
-    springs.push(s); JS.push(s); return s;
+  const nb={}; // node -> PhysBody
+  for(const [name,pos] of Object.entries(nodes)){
+    const r=nodeRadius[name]||.09;
+    const m=nodeMass[name]||1;
+    // proxy sphere (invisible)
+    const geo=new THREE.SphereGeometry(r,6,6);
+    const mat=new THREE.MeshBasicMaterial({visible:false});
+    const mesh=new THREE.Mesh(geo,mat);
+    mesh.position.copy(pos); scene.add(mesh);
+    const b=new PhysBody(mesh,r,m);
+    b.ragId=id; b.isLimb=true;
+    bodies.push(b); nb[name]=b;
   }
 
-  // local offsets FROM parent centre TO child centre (model space, Y-up)
-  addDist(lFoot,  lShin);
-  addDist(rFoot,  rShin);
-  addDist(lShin,  lThigh);
-  addDist(rShin,  rThigh);
-  addDist(lThigh, pelvis);
-  addDist(rThigh, pelvis);
-  addDist(pelvis, belly);
-  addDist(belly,  chest);
-  addDist(chest,  neck);
-  addDist(neck,   head);
-  addDist(chest,  lUA);
-  addDist(chest,  rUA);
-  addDist(lUA,    lFA);
-  addDist(rUA,    rFA);
+  // ── Bone segments (visual meshes, updated each frame) ──
+  // [nameA, nameB, radius, color]
+  const boneDefs=[
+    ['lAnkle','lKnee',  .075, PP_SKIN ],  // lower leg
+    ['rAnkle','rKnee',  .075, PP_SKIN ],
+    ['lKnee', 'lHip',   .085, PP_PANTS],  // upper leg
+    ['rKnee', 'rHip',   .085, PP_PANTS],
+    ['lHip',  'pelvis', .08,  PP_PANTS],
+    ['rHip',  'pelvis', .08,  PP_PANTS],
+    ['pelvis','spine1', .095, PP_SHIRT],   // torso
+    ['spine1','spine2', .095, PP_SHIRT],
+    ['spine2','lShldr', .085, PP_SHIRT],   // clavicle left
+    ['spine2','rShldr', .085, PP_SHIRT],   // clavicle right
+    ['lShldr','lElbow', .07,  PP_SHIRT],   // upper arm
+    ['rShldr','rElbow', .07,  PP_SHIRT],
+    ['lElbow','lWrist', .055, PP_SKIN ],   // forearm
+    ['rElbow','rWrist', .055, PP_SKIN ],
+    ['spine2','neck',   .07,  PP_SKIN ],   // neck
+    ['neck',  'head',   .075, PP_SKIN ],
+  ];
 
-  // Pose springs — keep limbs in anatomically correct sockets
-  // offsets are in local-space of the parent body
-  addPose(pelvis, lThigh, new THREE.Vector3(-X_HIP,  -(Y_HIP-Y_THIGH)/2, 0));
-  addPose(pelvis, rThigh, new THREE.Vector3( X_HIP,  -(Y_HIP-Y_THIGH)/2, 0));
-  addPose(pelvis, belly,  new THREE.Vector3(0,  (Y_BELLY-Y_HIP)/2, 0));
-  addPose(belly,  chest,  new THREE.Vector3(0,  (Y_CHEST-Y_BELLY)/2, 0));
-  addPose(chest,  neck,   new THREE.Vector3(0,  (Y_NECK-Y_CHEST)/2, 0));
-  addPose(neck,   head,   new THREE.Vector3(0,  (Y_HEAD-Y_NECK)/2,  0));
-  addPose(chest,  lUA,    new THREE.Vector3(-(X_SHOULDER+.06*S), .10*S, 0));
-  addPose(chest,  rUA,    new THREE.Vector3( (X_SHOULDER+.06*S), .10*S, 0));
-  addPose(lUA,    lFA,    new THREE.Vector3(-(X_HAND-X_ELBOW+.04*S), 0, 0));
-  addPose(rUA,    rFA,    new THREE.Vector3( (X_HAND-X_ELBOW+.04*S), 0, 0));
-  addPose(lThigh, lShin,  new THREE.Vector3(0, -(Y_THIGH-Y_SHIN)/2-.10*S, 0));
-  addPose(rThigh, rShin,  new THREE.Vector3(0, -(Y_THIGH-Y_SHIN)/2-.10*S, 0));
-  addPose(lShin,  lFoot,  new THREE.Vector3(0, -(Y_SHIN-Y_FOOT)/2-.16*S, .06*S));
-  addPose(rShin,  rFoot,  new THREE.Vector3(0, -(Y_SHIN-Y_FOOT)/2-.16*S, .06*S));
-
-  // Long-range stability braces (prevent full collapse without fighting pose)
-  addDist(lThigh, rThigh);
-  addDist(pelvis, chest);
-  addDist(lUA, rUA);
-
-  if(falling){
-    const v=new THREE.Vector3((Math.random()-.5)*5, 4+Math.random()*5, (Math.random()-.5)*5);
-    limbs.forEach(lb=>{ lb.vel.copy(v); lb.angVel.set((Math.random()-.5)*5,(Math.random()-.5)*5,(Math.random()-.5)*5); });
+  const boneMeshes=[];
+  for(const [a,b,r,col] of boneDefs){
+    const mesh=makeSegMesh(col);
+    scene.add(mesh);
+    boneMeshes.push({a,b,r,mesh});
   }
 
-  const rag={id, limbs, JS};
+  // ── Joint spheres (the visible ball at each node) ──
+  const jointSphereData=[
+    {name:'head',    r:.22, col:PP_SKIN },
+    {name:'neck',    r:.085,col:PP_SKIN },
+    {name:'spine2',  r:.10, col:PP_SHIRT},
+    {name:'spine1',  r:.095,col:PP_SHIRT},
+    {name:'pelvis',  r:.11, col:PP_PANTS},
+    {name:'lShldr',  r:.095,col:PP_SHIRT},
+    {name:'rShldr',  r:.095,col:PP_SHIRT},
+    {name:'lElbow',  r:.075,col:PP_SKIN },
+    {name:'rElbow',  r:.075,col:PP_SKIN },
+    {name:'lWrist',  r:.065,col:PP_SKIN },
+    {name:'rWrist',  r:.065,col:PP_SKIN },
+    {name:'lHip',    r:.085,col:PP_PANTS},
+    {name:'rHip',    r:.085,col:PP_PANTS},
+    {name:'lKnee',   r:.085,col:PP_SKIN },
+    {name:'rKnee',   r:.085,col:PP_SKIN },
+    {name:'lAnkle',  r:.075,col:PP_SHOE },
+    {name:'rAnkle',  r:.075,col:PP_SHOE },
+  ];
+  // Feet (boxes)
+  const lFootMesh=new THREE.Mesh(
+    new THREE.BoxGeometry(.14,.08,.24),
+    new THREE.MeshStandardMaterial({color:new THREE.Color(PP_SHOE),roughness:.8}));
+  lFootMesh.castShadow=true; scene.add(lFootMesh);
+  const rFootMesh=new THREE.Mesh(
+    new THREE.BoxGeometry(.14,.08,.24),
+    new THREE.MeshStandardMaterial({color:new THREE.Color(PP_SHOE),roughness:.8}));
+  rFootMesh.castShadow=true; scene.add(rFootMesh);
+
+  // Head face decorations (parented to a group that tracks head node)
+  const headGroup=new THREE.Group(); scene.add(headGroup);
+  // hair
+  const hairM=new THREE.Mesh(
+    new THREE.SphereGeometry(.225,12,7,0,Math.PI*2,0,Math.PI*.52),
+    new THREE.MeshStandardMaterial({color:new THREE.Color(PP_HAIR),roughness:.9}));
+  hairM.position.y=.02; headGroup.add(hairM);
+  // eyes
+  const eGeo=new THREE.SphereGeometry(.038,6,6);
+  const eMat=new THREE.MeshStandardMaterial({color:0x111111});
+  const eL=new THREE.Mesh(eGeo,eMat); eL.position.set(-.08,.05,.2); headGroup.add(eL);
+  const eR=new THREE.Mesh(eGeo,eMat); eR.position.set( .08,.05,.2); headGroup.add(eR);
+  // mouth
+  const mM=new THREE.Mesh(new THREE.BoxGeometry(.08,.014,.01),
+    new THREE.MeshStandardMaterial({color:0x881111}));
+  mM.position.set(0,-.065,.21); headGroup.add(mM);
+
+  const jointMeshes={};
+  for(const {name,r,col} of jointSphereData){
+    jointMeshes[name]=makeJointMesh(r,col);
+  }
+
+  // ── Constraints (distance) ──
+  const edgeDefs=[
+    // legs
+    ['lAnkle','lKnee'], ['rAnkle','rKnee'],
+    ['lKnee','lHip'],   ['rKnee','rHip'],
+    ['lHip','pelvis'],  ['rHip','pelvis'],
+    ['lHip','rHip'],    // hip width brace
+    // spine
+    ['pelvis','spine1'],['spine1','spine2'],
+    // shoulders
+    ['spine2','lShldr'],['spine2','rShldr'],
+    ['lShldr','rShldr'], // shoulder brace
+    // arms
+    ['lShldr','lElbow'],['rShldr','rElbow'],
+    ['lElbow','lWrist'],['rElbow','rWrist'],
+    // neck/head
+    ['spine2','neck'],  ['neck','head'],
+    // diagonal braces — these are CRITICAL for rigidity
+    ['spine1','lShldr'],['spine1','rShldr'],
+    ['pelvis','spine2'],
+    ['spine2','head'],
+    ['lHip','spine1'],  ['rHip','spine1'],
+    ['lShldr','spine1'],['rShldr','spine1'],
+    ['lKnee','rKnee'],  // knee brace (stops legs crossing)
+  ];
+
+  const constraints=[];
+  for(const [na,nb2] of edgeDefs){
+    const a2=nb[na], b2=nb[nb2];
+    if(!a2||!b2) continue;
+    const rest=a2.pos.distanceTo(b2.pos);
+    constraints.push({a:a2, b:b2, rest});
+  }
+
+  if(opts.falling){
+    const v=new THREE.Vector3((Math.random()-.5)*6,3+Math.random()*6,(Math.random()-.5)*6);
+    Object.values(nb).forEach(b2=>{
+      b2.vel.copy(v);
+      b2.angVel.set((Math.random()-.5)*4,(Math.random()-.5)*4,(Math.random()-.5)*4);
+    });
+  }
+
+  const rag={
+    id, nb, boneMeshes, jointMeshes,
+    lFootMesh, rFootMesh, headGroup,
+    constraints,
+    stiffIters: ragStiffIters,
+    get limbs(){ return Object.values(this.nb); }
+  };
   ragdolls.push(rag);
   updateStats();
   return rag;
 }
 
+function updateRagdollVisuals(rag){
+  const {nb,boneMeshes,jointMeshes,lFootMesh,rFootMesh,headGroup}=rag;
+  // bones
+  for(const {a,b,r,mesh} of boneMeshes){
+    if(nb[a]&&nb[b]) updateBoneMesh(mesh, nb[a].pos, nb[b].pos, r);
+  }
+  // joint spheres
+  for(const [name,mesh] of Object.entries(jointMeshes)){
+    if(nb[name]) mesh.position.copy(nb[name].pos);
+  }
+  // feet  — orient shoe box toward ankle→knee direction
+  if(nb.lAnkle&&nb.lKnee){
+    lFootMesh.position.copy(nb.lAnkle.pos).y-=.04;
+    lFootMesh.position.z+=.04;
+  }
+  if(nb.rAnkle&&nb.rKnee){
+    rFootMesh.position.copy(nb.rAnkle.pos).y-=.04;
+    rFootMesh.position.z+=.04;
+  }
+  // head group tracks head node with a simple look toward neck→head dir
+  if(nb.head&&nb.neck){
+    headGroup.position.copy(nb.head.pos);
+    const up=new THREE.Vector3(0,1,0);
+    const dir=new THREE.Vector3().subVectors(nb.head.pos,nb.neck.pos).normalize();
+    headGroup.quaternion.setFromUnitVectors(up,dir);
+  }
+}
+
 function removeRagdoll(rag){
-  rag.JS.forEach(s=>{ const i=springs.indexOf(s); if(i>=0) springs.splice(i,1); });
+  // remove visual meshes
+  for(const {mesh} of rag.boneMeshes){ scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); }
+  for(const mesh of Object.values(rag.jointMeshes)){ scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); }
+  scene.remove(rag.lFootMesh); rag.lFootMesh.geometry.dispose(); rag.lFootMesh.material.dispose();
+  scene.remove(rag.rFootMesh); rag.rFootMesh.geometry.dispose(); rag.rFootMesh.material.dispose();
+  scene.remove(rag.headGroup);
+  // remove physics bodies
   for(let i=bodies.length-1;i>=0;i--){
-    if(rag.limbs.includes(bodies[i])) removeBodyAt(i);
+    if(bodies[i].ragId===rag.id) removeBodyAt(i);
   }
   const ri=ragdolls.indexOf(rag); if(ri>=0) ragdolls.splice(ri,1);
   updateStats();
@@ -769,11 +793,11 @@ function removeRagdoll(rag){
 
 function removeAllRagdolls(){ [...ragdolls].forEach(r=>removeRagdoll(r)); }
 
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  CAMERA
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 let camYaw=-0.15, camPitch=-0.2;
-const camPos=new THREE.Vector3(0,10,28);
+const camPos=new THREE.Vector3(0,8,24);
 const keys={};
 const CAM_SPEED=16;
 
@@ -783,12 +807,10 @@ function applyLook(){
   camera.quaternion.copy(qY).multiply(qX);
   camera.position.copy(camPos);
 }
-
 function processCam(dt){
   const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-  const rgt=new THREE.Vector3(1,0, 0).applyQuaternion(camera.quaternion);
-  const up =new THREE.Vector3(0,1, 0);
-  const s=CAM_SPEED*dt;
+  const rgt=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+  const up=new THREE.Vector3(0,1,0), s=CAM_SPEED*dt;
   if(keys['KeyW']||keys['ArrowUp'])    camPos.addScaledVector(fwd, s);
   if(keys['KeyS']||keys['ArrowDown'])  camPos.addScaledVector(fwd,-s);
   if(keys['KeyA']||keys['ArrowLeft'])  camPos.addScaledVector(rgt,-s);
@@ -797,10 +819,8 @@ function processCam(dt){
   if(keys['KeyQ']) camPos.addScaledVector(up,-s);
   camera.position.copy(camPos);
 }
-
 document.addEventListener('keydown',e=>{ keys[e.code]=true; });
 document.addEventListener('keyup',  e=>{ keys[e.code]=false; });
-
 let rcDrag=false, rcLast={x:0,y:0};
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('mousedown',e=>{ if(e.button===2){rcDrag=true;rcLast={x:e.clientX,y:e.clientY};} });
@@ -819,80 +839,64 @@ canvas.addEventListener('wheel',e=>{
 },{passive:true});
 applyLook();
 
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  INTERACTION
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 const raycaster=new THREE.Raycaster();
 let activeTool='grab';
-
 let grabBody=null, grabPlane=new THREE.Plane(), grabVel=new THREE.Vector3();
-let mdPos={x:0,y:0}, mdTime=0, mdMoved=false;
-let lastHitBody=null;
+let mdPos={x:0,y:0}, mdTime=0, mdMoved=false, lastHitBody=null;
 
 function ndcOf(e){ return new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1); }
 
 function hitBody(e){
   raycaster.setFromCamera(ndcOf(e),camera);
   const hits=raycaster.intersectObjects(bodies.map(b=>b.mesh));
-  return hits.length ? (bodies.find(b=>b.mesh===hits[0].object)||null) : null;
+  return hits.length?(bodies.find(b=>b.mesh===hits[0].object)||null):null;
 }
 
 canvas.addEventListener('mousedown',e=>{
   if(e.button!==0||e.target!==canvas) return;
   mdPos={x:e.clientX,y:e.clientY}; mdTime=performance.now(); mdMoved=false;
-  const b=hitBody(e);
-  if(!b) return;
+  const b=hitBody(e); if(!b) return;
   lastHitBody=b;
 
   if(activeTool==='grab'){
-    grabBody=b; grabBody.vel.set(0,0,0); grabVel.set(0,0,0);
+    grabBody=b; b.vel.set(0,0,0); grabVel.set(0,0,0);
     const cd=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-    grabPlane.setFromNormalAndCoplanarPoint(cd,grabBody.pos);
+    grabPlane.setFromNormalAndCoplanarPoint(cd,b.pos);
     canvas.style.cursor='grabbing';
   } else if(activeTool==='push'){
     const dir=new THREE.Vector3().subVectors(b.pos,camera.position).normalize();
-    b.vel.addScaledVector(dir,18);
-    b.angVel.set((Math.random()-.5)*12,(Math.random()-.5)*12,(Math.random()-.5)*12);
+    b.vel.addScaledVector(dir,20);
   } else if(activeTool==='explode'){
     bodies.forEach(ob=>{
       const d=new THREE.Vector3().subVectors(ob.pos,b.pos);
       const dist=Math.max(d.length(),.5);
-      if(dist<10) ob.vel.addScaledVector(d.normalize(),30/(dist*dist));
+      if(dist<10) ob.vel.addScaledVector(d.normalize(),32/(dist*dist));
     });
     toast('💥 BOOM!');
   } else if(activeTool==='link'){
     if(!linkA){
-      linkA=b;
-      b.mesh.material.emissiveIntensity=0.55;
-      updateLinkStatus();
-      toast('🔗 First object selected — click second object');
+      linkA=b; b.mesh.material.visible&&(b.mesh.material.emissiveIntensity=.55);
+      updateLinkStatus(); toast('🔗 First selected — click second');
     } else if(b===linkA){
-      // clicked same object — deselect
-      linkA.mesh.material.emissiveIntensity=0.1;
       linkA=null; updateLinkStatus();
     } else {
-      linkA.mesh.material.emissiveIntensity=0.1;
-      createUserLink(linkA, b);
-      linkA=null;
-      toast('🔗 Link created!');
+      createUserLink(linkA,b); linkA=null; toast('🔗 Link created!');
     }
     return;
   } else if(activeTool==='cut'){
-    cutLinksOnBody(b);
-    updateLinkStatus();
-    toast('✂️ Links cut');
-    return;
+    cutLinksOnBody(b); updateLinkStatus(); toast('✂️ Links cut'); return;
   }
 });
 
 document.addEventListener('mousemove',e=>{
-  const dx=e.clientX-mdPos.x, dy=e.clientY-mdPos.y;
-  if(Math.abs(dx)>4||Math.abs(dy)>4) mdMoved=true;
-
+  if(Math.abs(e.clientX-mdPos.x)>4||Math.abs(e.clientY-mdPos.y)>4) mdMoved=true;
   if(!grabBody){
     if(e.target===canvas){
       const b=hitBody(e);
-      canvas.style.cursor = b ? (activeTool==='grab'?'grab':'pointer') : 'crosshair';
+      canvas.style.cursor=b?(activeTool==='grab'?'grab':'pointer'):'crosshair';
     }
     return;
   }
@@ -900,8 +904,7 @@ document.addEventListener('mousemove',e=>{
   const pt=new THREE.Vector3();
   if(raycaster.ray.intersectPlane(grabPlane,pt)){
     const prev=grabBody.pos.clone();
-    grabBody.pos.copy(pt);
-    grabBody.vel.set(0,0,0);
+    grabBody.pos.copy(pt); grabBody.vel.set(0,0,0);
     grabVel.lerp(pt.clone().sub(prev).multiplyScalar(60),.38);
   }
 });
@@ -911,24 +914,18 @@ document.addEventListener('mouseup',e=>{
   if(grabBody){
     grabBody.vel.copy(grabVel);
     if(grabBody.vel.length()>50) grabBody.vel.setLength(50);
-    grabBody.angVel.set((Math.random()-.5)*10,(Math.random()-.5)*10,(Math.random()-.5)*10);
     grabBody=null; canvas.style.cursor='crosshair'; return;
   }
-  if(!mdMoved && performance.now()-mdTime<260 && e.target===canvas){
+  if(!mdMoved&&performance.now()-mdTime<260&&e.target===canvas){
     raycaster.setFromCamera(ndcOf(e),camera);
     const dir=raycaster.ray.direction.clone();
-    spawnBody(
-      camera.position.clone().addScaledVector(dir,2.5),
-      dir.multiplyScalar(15),
-      selectedShape, selectedColor, spawnScale
-    );
+    spawnBody(camera.position.clone().addScaledVector(dir,2.5),dir.multiplyScalar(15),selectedShape,selectedColor,spawnScale);
   }
 });
 
-// ════════════════════════════════════════════
-//  UI
-// ════════════════════════════════════════════
-// Tabs
+// ════════════════════════════════════════════════════════
+//  UI WIRING
+// ════════════════════════════════════════════════════════
 document.querySelectorAll('.tab-btn').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
@@ -937,74 +934,52 @@ document.querySelectorAll('.tab-btn').forEach(b=>{
     document.getElementById('tab-'+b.dataset.tab).classList.add('active');
   });
 });
-
-// Shape picker
 document.querySelectorAll('.ibtn[data-shape]').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('.ibtn[data-shape]').forEach(x=>x.classList.remove('sel'));
-    b.classList.add('sel'); selectedShape=b.dataset.shape;
-  });
+  b.addEventListener('click',()=>{ document.querySelectorAll('.ibtn[data-shape]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); selectedShape=b.dataset.shape; });
 });
 
-// Colors
 const cr=document.getElementById('color-row');
 COLORS.forEach(hex=>{
-  const d=document.createElement('div');
-  d.className='csw'+(hex===selectedColor?' active':'');
-  d.style.background=hex;
-  d.addEventListener('click',()=>{ document.querySelectorAll('.csw').forEach(x=>x.classList.remove('active')); d.classList.add('active'); selectedColor=hex; });
+  const d=document.createElement('div'); d.className='csw'+(hex===selectedColor?' active':''); d.style.background=hex;
+  d.addEventListener('click',()=>{ document.querySelectorAll('#color-row .csw').forEach(x=>x.classList.remove('active')); d.classList.add('active'); selectedColor=hex; });
   cr.appendChild(d);
 });
 
-// Sliders
 function mks(id,vi,fn,fmt){
-  const sl=document.getElementById(id), vl=document.getElementById(vi);
+  const sl=document.getElementById(id),vl=document.getElementById(vi);
   if(!sl||!vl) return;
   sl.addEventListener('input',()=>{ const v=parseFloat(sl.value); fn(v); vl.textContent=fmt?fmt(v):v; });
 }
 mks('sl-scale','val-scale',v=>spawnScale=v,v=>v.toFixed(1));
-mks('sl-gravity','val-gravity',v=>{ gravity=v; document.getElementById('stat-g').textContent=v.toFixed(1); },v=>v.toFixed(1));
+mks('sl-gravity','val-gravity',v=>{ gravity=v; document.getElementById('stat-g').textContent=v.toFixed(0); },v=>v.toFixed(0));
 mks('sl-bounce','val-bounce',v=>bounce=v,v=>v.toFixed(2));
 mks('sl-friction','val-friction',v=>friction=v,v=>v.toFixed(2));
 mks('sl-drag','val-drag',v=>airDrag=v,v=>v.toFixed(3));
-mks('sl-stiff','val-stiff',v=>{ jointK=v; ragdolls.forEach(r=>r.JS.forEach(s=>{ s.k=s instanceof PoseSpring ? v*1.4 : v; })); },v=>Math.round(v));
-mks('sl-damp','val-damp',v=>{ jointD=v; ragdolls.forEach(r=>r.JS.forEach(s=>{ s.d=s instanceof PoseSpring ? v*1.2 : v; })); },v=>Math.round(v));
-mks('sl-mass','val-mass',v=>limbMass=v,v=>v.toFixed(1));
-
-// Link settings
+mks('sl-stiff','val-stiff',v=>{ ragStiffIters=Math.round(v); ragdolls.forEach(r=>r.stiffIters=Math.round(v)); },v=>Math.round(v));
+mks('sl-damp','val-damp',v=>{ ragDamping=v; },v=>v.toFixed(2));
 mks('sl-link-k','val-link-k',v=>linkK=v,v=>Math.round(v));
 mks('sl-link-d','val-link-d',v=>linkD=v,v=>Math.round(v));
 mks('sl-link-rest','val-link-rest',v=>{ linkRestOverride=v; document.getElementById('val-link-rest').textContent=v===0?'Auto':v.toFixed(1); },null);
 document.getElementById('chk-rope').addEventListener('change',function(){ ropeMode=this.checked; });
 
-// Link color swatches
 const lcr=document.getElementById('link-color-row');
 ['#f5c518','#00ffe7','#ff4d6d','#ffffff','#fb923c','#4ade80','#8b5cf6','#f472b6'].forEach(hex=>{
-  const d=document.createElement('div');
-  d.className='csw'+(hex===linkColor?' active':'');
-  d.style.background=hex;
+  const d=document.createElement('div'); d.className='csw'+(hex===linkColor?' active':''); d.style.background=hex;
   d.addEventListener('click',()=>{ document.querySelectorAll('#link-color-row .csw').forEach(x=>x.classList.remove('active')); d.classList.add('active'); linkColor=hex; });
   lcr.appendChild(d);
 });
 
-// Pin to air
 document.getElementById('btn-pin-toggle').addEventListener('click',()=>{
-  if(!lastHitBody){ toast('Grab a body first, then pin it'); return; }
-  lastHitBody.pinned=!lastHitBody.pinned;
-  lastHitBody.vel.set(0,0,0);
-  toast(lastHitBody.pinned?'📌 Object pinned to air':'📌 Object unpinned');
+  if(!lastHitBody){ toast('Click/grab a body first'); return; }
+  lastHitBody.pinned=!lastHitBody.pinned; lastHitBody.vel.set(0,0,0);
+  toast(lastHitBody.pinned?'📌 Pinned':'📌 Unpinned');
 });
-
-// Cut all user links
 document.getElementById('btn-cut-all').addEventListener('click',()=>{
-  for(let i=userLinks.length-1;i>=0;i--) removeUserLink(i);
-  toast('✂️ All links cut');
+  for(let i=userLinks.length-1;i>=0;i--) removeUserLink(i); toast('✂️ All links cut');
 });
 
-// Tool buttons
 function setTool(t){
-  // deselect any pending link selection
-  if(linkA){ linkA.mesh.material.emissiveIntensity=0.1; linkA=null; }
+  if(linkA){ linkA=null; }
   activeTool=t;
   document.querySelectorAll('#tool-bar .tool-btn:not(.red)').forEach(b=>b.classList.remove('active'));
   const el=document.getElementById('btn-'+t+'-tool'); if(el) el.classList.add('active');
@@ -1016,17 +991,15 @@ document.getElementById('btn-explode-tool').addEventListener('click',()=>setTool
 document.getElementById('btn-link-tool').addEventListener('click',()=>{ setTool('link'); document.querySelector('[data-tab="connect"]').click(); });
 document.getElementById('btn-cut-tool').addEventListener('click',()=>{ setTool('cut'); document.querySelector('[data-tab="connect"]').click(); });
 
-// Drop object
 document.getElementById('btn-drop').addEventListener('click',()=>{
   const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
   const pos=camPos.clone().addScaledVector(fwd,6); pos.y=Math.max(pos.y,FLOOR_Y+3);
   spawnBody(pos,new THREE.Vector3((Math.random()-.5)*2,2,(Math.random()-.5)*2),selectedShape,selectedColor,spawnScale);
 });
 
-// Rain
 let rainInt=null;
 document.getElementById('btn-rain').addEventListener('click',function(){
-  if(rainInt){clearInterval(rainInt);rainInt=null;this.textContent='☂ Object Rain';return;}
+  if(rainInt){ clearInterval(rainInt); rainInt=null; this.textContent='☂ Object Rain'; return; }
   this.textContent='■ Stop Rain';
   rainInt=setInterval(()=>{
     if(bodies.length>160) return;
@@ -1037,7 +1010,6 @@ document.getElementById('btn-rain').addEventListener('click',function(){
   },110);
 });
 
-// Physics
 let floorState=true, wallState=false, zeroG=false;
 document.getElementById('btn-floor-toggle').addEventListener('click',function(){
   floorState=!floorState; floorOn=floorState;
@@ -1050,76 +1022,58 @@ document.getElementById('btn-walls-toggle').addEventListener('click',function(){
   this.textContent='Walls: '+(wallsOn?'ON':'OFF');
 });
 document.getElementById('btn-zerog').addEventListener('click',()=>{
-  zeroG=!zeroG; gravity=zeroG?0:parseFloat(document.getElementById('sl-gravity').value)||9.8;
-  document.getElementById('val-gravity').textContent=gravity.toFixed(1);
-  document.getElementById('stat-g').textContent=gravity.toFixed(1);
-  toast(zeroG?'🌌 Zero-G! Objects float freely':'🌍 Gravity restored');
+  zeroG=!zeroG; gravity=zeroG?0:parseFloat(document.getElementById('sl-gravity').value)||14;
+  document.getElementById('val-gravity').textContent=gravity.toFixed(0);
+  document.getElementById('stat-g').textContent=gravity.toFixed(0);
+  toast(zeroG?'🌌 Zero-G!':'🌍 Gravity restored');
 });
 document.getElementById('btn-nuke').addEventListener('click',()=>{
   const c=new THREE.Vector3(0,FLOOR_Y+2,0);
-  bodies.forEach(b=>{
-    const d=new THREE.Vector3().subVectors(b.pos,c);
-    b.vel.addScaledVector(d.normalize().divideScalar(Math.max(d.length(),.5)),42);
-    b.angVel.set((Math.random()-.5)*22,(Math.random()-.5)*22,(Math.random()-.5)*22);
-  });
-  toast('☢️ NUKED THE SCENE');
+  bodies.forEach(b=>{ const d=new THREE.Vector3().subVectors(b.pos,c); b.vel.addScaledVector(d.normalize().divideScalar(Math.max(d.length(),.5)),42); });
+  toast('☢️ NUKED');
 });
 
-// Clear
 document.getElementById('btn-clear').addEventListener('click',clearAll);
 function clearAll(){
-  if(rainInt){clearInterval(rainInt);rainInt=null;document.getElementById('btn-rain').textContent='☂ Object Rain';}
-  if(linkA){ linkA=null; }
+  if(rainInt){ clearInterval(rainInt); rainInt=null; document.getElementById('btn-rain').textContent='☂ Object Rain'; }
+  linkA=null;
   for(let i=userLinks.length-1;i>=0;i--) removeUserLink(i);
+  [...ragdolls].forEach(r=>removeRagdoll(r));
   for(let i=bodies.length-1;i>=0;i--) removeBodyAt(i);
-  springs.length=0; ragdolls.length=0;
   updateStats(); updateLinkStatus(); toast('Scene cleared');
 }
 
-// Human
-function getCamFront(dist){
-  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-  return camPos.clone().addScaledVector(fwd,dist);
-}
+function getCamFront(d){ return camPos.clone().addScaledVector(new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion),d); }
+
 document.getElementById('btn-spawn-rag').addEventListener('click',()=>{
-  const p=getCamFront(7); p.y=FLOOR_Y+0.05;
-  spawnRagdoll(p);
-  toast('👤 Grab any body part and drag!');
+  const p=getCamFront(6); p.y=FLOOR_Y;
+  spawnRagdoll(p); toast('👤 Grab any limb and drag!');
 });
 document.getElementById('btn-spawn-rag-fall').addEventListener('click',()=>{
-  const p=getCamFront(6); p.y=FLOOR_Y+16;
+  const p=getCamFront(5); p.y=FLOOR_Y+14;
   spawnRagdoll(p,{falling:true});
 });
-document.getElementById('btn-rm-rags').addEventListener('click',()=>{ removeAllRagdolls(); updateStats(); toast('Ragdolls removed'); });
+document.getElementById('btn-rm-rags').addEventListener('click',()=>{ removeAllRagdolls(); toast('Ragdolls removed'); });
 
 document.getElementById('btn-floppy').addEventListener('click',()=>{
-  ragdolls.forEach(r=>r.JS.forEach(s=>{ s.k=20; s.d=3; }));
-  jointK=20; jointD=3;
-  document.getElementById('sl-stiff').value=20; document.getElementById('val-stiff').textContent='20';
-  document.getElementById('sl-damp').value=3;   document.getElementById('val-damp').textContent='3';
-  toast('😵 Floppy mode!');
+  ragStiffIters=2; ragdolls.forEach(r=>r.stiffIters=2);
+  document.getElementById('sl-stiff').value=2; document.getElementById('val-stiff').textContent='2';
+  toast('😵 Floppy!');
 });
-document.getElementById('btn-tpose').addEventListener('click',()=>{
-  ragdolls.forEach(r=>r.JS.forEach(s=>{ s.k=500; s.d=35; }));
-  jointK=500; jointD=35;
-  document.getElementById('sl-stiff').value=500; document.getElementById('val-stiff').textContent='500';
-  document.getElementById('sl-damp').value=35;   document.getElementById('val-damp').textContent='35';
-  toast('🧍 Stiff mode!');
+document.getElementById('btn-stiffen').addEventListener('click',()=>{
+  ragStiffIters=12; ragdolls.forEach(r=>r.stiffIters=12);
+  document.getElementById('sl-stiff').value=12; document.getElementById('val-stiff').textContent='12';
+  toast('🧍 Stiff!');
 });
 document.getElementById('btn-explode-rag').addEventListener('click',()=>{
-  ragdolls.forEach(r=>{
-    r.limbs.forEach(lb=>{
-      lb.vel.set((Math.random()-.5)*22,6+Math.random()*14,(Math.random()-.5)*22);
-      lb.angVel.set((Math.random()-.5)*25,(Math.random()-.5)*25,(Math.random()-.5)*25);
-    });
-  });
-  toast('💥 Ragdolls launched!');
+  ragdolls.forEach(r=>Object.values(r.nb).forEach(b=>{
+    b.vel.set((Math.random()-.5)*22,6+Math.random()*14,(Math.random()-.5)*22);
+  })); toast('💥 Launched!');
 });
 
-// Keyboard
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT') return;
-  if(e.code==='Space'){e.preventDefault();document.getElementById('btn-drop').click();}
+  if(e.code==='Space'){ e.preventDefault(); document.getElementById('btn-drop').click(); }
   if(e.key==='c'||e.key==='C') clearAll();
   if(e.key==='h'||e.key==='H') document.getElementById('btn-spawn-rag').click();
   if(e.key==='g'||e.key==='G') document.getElementById('btn-zerog').click();
@@ -1127,35 +1081,26 @@ document.addEventListener('keydown',e=>{
   if(e.key==='1') setTool('grab');
   if(e.key==='2') setTool('push');
   if(e.key==='3') setTool('explode');
-  if(e.key==='4') { setTool('link'); document.querySelector('[data-tab="connect"]').click(); }
-  if(e.key==='5') { setTool('cut');  document.querySelector('[data-tab="connect"]').click(); }
+  if(e.key==='4'){ setTool('link'); document.querySelector('[data-tab="connect"]').click(); }
+  if(e.key==='5'){ setTool('cut');  document.querySelector('[data-tab="connect"]').click(); }
   if(e.key==='p'||e.key==='P'){ if(lastHitBody){ lastHitBody.pinned=!lastHitBody.pinned; lastHitBody.vel.set(0,0,0); toast(lastHitBody.pinned?'📌 Pinned':'📌 Unpinned'); } }
 });
 
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  STATS / TOAST
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function updateStats(){ document.getElementById('stat-obj').textContent=bodies.length; }
-
 let lastFpsT=performance.now(), fN=0;
 function upFPS(now){
   fN++;
-  if(now-lastFpsT>600){
-    document.getElementById('stat-fps').textContent=Math.round(fN*1000/(now-lastFpsT));
-    fN=0; lastFpsT=now;
-  }
+  if(now-lastFpsT>600){ document.getElementById('stat-fps').textContent=Math.round(fN*1000/(now-lastFpsT)); fN=0; lastFpsT=now; }
 }
-
 let toastT;
-function toast(msg){
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.style.opacity='1';
-  clearTimeout(toastT); toastT=setTimeout(()=>el.style.opacity='0',2200);
-}
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.style.opacity='1'; clearTimeout(toastT); toastT=setTimeout(()=>el.style.opacity='0',2200); }
 
-// ════════════════════════════════════════════
-//  LOOP
-// ════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  RENDER LOOP
+// ════════════════════════════════════════════════════════
 let lastT=performance.now();
 function animate(now){
   requestAnimationFrame(animate);
@@ -1163,31 +1108,29 @@ function animate(now){
   processCam(dt);
   physicsStep(dt);
   if(grabBody) grabBody.vel.set(0,0,0);
+  // update ragdoll visuals
+  ragdolls.forEach(r=>updateRagdollVisuals(r));
   updateLinkVisuals();
-  rimL.intensity=.3+.1*Math.sin(now*.0007);
+  rimL.intensity=.28+.09*Math.sin(now*.0007);
   upFPS(now);
   renderer.render(scene,camera);
 }
 requestAnimationFrame(animate);
 
 window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 });
 
-// ── Seed scene ──
+// ── Seed ──
 setTimeout(()=>{
   ['sphere','box','icosa','torus','cone'].forEach((sh,i)=>{
-    spawnBody(
-      new THREE.Vector3((i-2)*3.5, FLOOR_Y+14, (Math.random()-.5)*5),
-      new THREE.Vector3((Math.random()-.5)*4, 5, (Math.random()-.5)*2),
-      sh, COLORS[i], 1
-    );
+    spawnBody(new THREE.Vector3((i-2)*3.5,FLOOR_Y+14,(Math.random()-.5)*4),
+      new THREE.Vector3((Math.random()-.5)*4,5,(Math.random()-.5)*2), sh, COLORS[i], 1);
   });
-  spawnRagdoll(new THREE.Vector3(0, FLOOR_Y + 0.05, -2));
-  toast('👤 H=Human  4=Link  5=Cut  P=Pin  1-3=Tools  WASD+RMB=Camera');
-}, 400);
+  spawnRagdoll(new THREE.Vector3(0,FLOOR_Y,0));
+  toast('👤 H=Human  1-5=Tools  WASD+RMB=Camera  P=Pin');
+},350);
 </script>
 </body>
 </html>
