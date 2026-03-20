@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRAVITAS — 3D Physics Engine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #070a0f;
+    --panel: rgba(10,18,30,0.85);
+    --accent: #00ffe7;
+    --accent2: #ff4d6d;
+    --accent3: #f5c518;
+    --text: #c8d8e8;
+    --dim: #4a6070;
+    --border: rgba(0,255,231,0.18);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+
+  #canvas-container {
+    position: fixed; inset: 0;
+  }
+
+  canvas#three { display: block; width: 100%; height: 100%; }
+
+  /* HUD overlay */
+  #hud {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    display: grid;
+    grid-template-columns: 220px 1fr 220px;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .panel {
+    pointer-events: all;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    padding: 16px;
+  }
+
+  #panel-left {
+    grid-column: 1; grid-row: 1 / 4;
+    border-left: none; border-top: none; border-bottom: none;
+    display: flex; flex-direction: column; gap: 14px;
+    overflow-y: auto;
+  }
+
+  #panel-bottom {
+    grid-column: 1 / 4; grid-row: 3;
+    border: none;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 24px;
+    padding: 10px 24px;
+    pointer-events: all;
+  }
+
+  #stats-box {
+    grid-column: 3; grid-row: 1;
+    border-right: none; border-top: none;
+    font-size: 11px;
+    line-height: 1.9;
+    min-width: 200px;
+  }
+
+  h1.logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-shadow: 0 0 18px var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .sub { font-size: 10px; color: var(--dim); letter-spacing: 0.2em; }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+  }
+
+  .ctrl-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; font-size: 11px;
+  }
+
+  .ctrl-row label { color: var(--dim); white-space: nowrap; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 3px;
+    background: var(--dim);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    cursor: pointer;
+  }
+
+  .val { color: var(--accent3); font-size: 10px; min-width: 32px; text-align: right; }
+
+  button.spawn-btn {
+    width: 100%; padding: 8px 0;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+    text-transform: uppercase;
+  }
+  button.spawn-btn:hover {
+    background: rgba(0,255,231,0.1);
+    box-shadow: 0 0 12px var(--accent);
+  }
+  button.spawn-btn.danger { border-color: var(--accent2); color: var(--accent2); }
+  button.spawn-btn.danger:hover { background: rgba(255,77,109,0.1); box-shadow: 0 0 12px var(--accent2); }
+
+  .stat-line { display: flex; justify-content: space-between; }
+  .stat-line span:last-child { color: var(--accent3); }
+
+  .key-hint { font-size: 10px; color: var(--dim); }
+  .key-hint kbd {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--dim);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--text);
+    font-size: 9px;
+    margin: 0 2px;
+  }
+
+  #crosshair {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px; height: 20px;
+    pointer-events: none;
+  }
+  #crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(0,255,231,0.5);
+  }
+  #crosshair::before { width: 2px; height: 100%; left: 50%; top: 0; transform: translateX(-50%); }
+  #crosshair::after { width: 100%; height: 2px; top: 50%; left: 0; transform: translateY(-50%); }
+
+  #toast {
+    position: fixed; bottom: 60px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,255,231,0.12);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 11px;
+    padding: 7px 18px;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  #shape-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+  .shape-btn {
+    flex: 1; min-width: 56px;
+    padding: 5px 0;
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .shape-btn:hover, .shape-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(0,255,231,0.2);
+  }
+
+  #color-picker { display: flex; gap: 6px; align-items: center; }
+  .color-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    cursor: pointer; border: 2px solid transparent;
+    transition: transform 0.12s, border-color 0.12s;
+    flex-shrink: 0;
+  }
+  .color-dot:hover { transform: scale(1.3); }
+  .color-dot.active { border-color: white; transform: scale(1.15); }
+
+  #trail-toggle { display: flex; gap: 6px; }
+  .toggle-btn {
+    flex: 1; padding: 5px; background: transparent;
+    border: 1px solid var(--dim); color: var(--dim);
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    cursor: pointer; letter-spacing: 0.05em; transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .toggle-btn.active { border-color: var(--accent3); color: var(--accent3); box-shadow: 0 0 8px rgba(245,197,24,0.2); }
+
+  #floor-toggle { display: flex; gap: 6px; }
+</style>
+</head>
+<body>
+
+<div id="canvas-container">
+  <canvas id="three"></canvas>
+</div>
+
+<div id="crosshair"></div>
+<div id="toast"></div>
+
+<div id="hud">
+  <div id="panel-left" class="panel">
+    <div>
+      <h1 class="logo">GRAVITAS</h1>
+      <div class="sub">3D PHYSICS ENGINE v1.0</div>
+    </div>
+
+    <div>
+      <div class="section-label">Spawn Shape</div>
+      <div id="shape-picker">
+        <button class="shape-btn active" data-shape="sphere">Sphere</button>
+        <button class="shape-btn" data-shape="box">Box</button>
+        <button class="shape-btn" data-shape="cone">Cone</button>
+        <button class="shape-btn" data-shape="cyl">Cyl</button>
+        <button class="shape-btn" data-shape="torus">Torus</button>
+        <button class="shape-btn" data-shape="icosa">Icosa</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Color</div>
+      <div id="color-picker"></div>
+    </div>
+
+    <div>
+      <div class="section-label">Physics</div>
+      <div class="ctrl-row"><label>Gravity</label><span class="val" id="val-gravity">9.8</span></div>
+      <input type="range" id="slider-gravity" min="0" max="30" step="0.1" value="9.8">
+      <br>
+      <div class="ctrl-row"><label>Bounce</label><span class="val" id="val-bounce">0.55</span></div>
+      <input type="range" id="slider-bounce" min="0" max="1" step="0.01" value="0.55">
+      <br>
+      <div class="ctrl-row"><label>Friction</label><span class="val" id="val-friction">0.88</span></div>
+      <input type="range" id="slider-friction" min="0.5" max="1" step="0.01" value="0.88">
+      <br>
+      <div class="ctrl-row"><label>Launch Power</label><span class="val" id="val-power">12</span></div>
+      <input type="range" id="slider-power" min="1" max="40" step="0.5" value="12">
+    </div>
+
+    <div>
+      <div class="section-label">Effects</div>
+      <div id="trail-toggle">
+        <button class="toggle-btn active" id="btn-trails">Trails ON</button>
+        <button class="toggle-btn active" id="btn-shadows">Shadows ON</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Floor</div>
+      <div id="floor-toggle">
+        <button class="toggle-btn active" id="btn-floor">Floor ON</button>
+        <button class="toggle-btn" id="btn-walls">Walls OFF</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Actions</div>
+      <button class="spawn-btn" id="btn-spawn">⬡ Spawn at Center</button>
+      <br><br>
+      <button class="spawn-btn" id="btn-rain">☂ Object Rain</button>
+      <br><br>
+      <button class="spawn-btn danger" id="btn-clear">✕ Clear All</button>
+    </div>
+  </div>
+
+  <div id="stats-box" class="panel">
+    <div class="section-label">Stats</div>
+    <div class="stat-line"><span>Objects</span><span id="stat-objects">0</span></div>
+    <div class="stat-line"><span>FPS</span><span id="stat-fps">0</span></div>
+    <div class="stat-line"><span>Gravity</span><span id="stat-gravity">9.8 m/s²</span></div>
+    <div class="stat-line"><span>Sim Time</span><span id="stat-time">0.0s</span></div>
+  </div>
+
+  <div id="panel-bottom" class="panel">
+    <span class="key-hint"><kbd>Click</kbd> Launch at cursor</span>
+    <span class="key-hint"><kbd>Drag</kbd> Orbit camera</span>
+    <span class="key-hint"><kbd>Scroll</kbd> Zoom</span>
+    <span class="key-hint"><kbd>R</kbd> Rain</span>
+    <span class="key-hint"><kbd>Space</kbd> Spawn</span>
+    <span class="key-hint"><kbd>C</kbd> Clear</span>
+    <span class="key-hint"><kbd>G</kbd> Toggle gravity</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── SCENE SETUP ────────────────────────────────────────────────────────────
+const canvas = document.getElementById('three');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x070a0f);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x070a0f, 0.018);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+camera.position.set(0, 12, 28);
+camera.lookAt(0, 0, 0);
+
+// ─── LIGHTING ────────────────────────────────────────────────────────────────
+const ambient = new THREE.AmbientLight(0x112233, 0.6);
+scene.add(ambient);
+
+const sunLight = new THREE.DirectionalLight(0xfff0dd, 1.4);
+sunLight.position.set(20, 40, 20);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 0.1;
+sunLight.shadow.camera.far = 200;
+sunLight.shadow.camera.left = -40;
+sunLight.shadow.camera.right = 40;
+sunLight.shadow.camera.top = 40;
+sunLight.shadow.camera.bottom = -40;
+sunLight.shadow.bias = -0.001;
+scene.add(sunLight);
+
+const fillLight = new THREE.PointLight(0x0044ff, 0.8, 60);
+fillLight.position.set(-15, 5, -10);
+scene.add(fillLight);
+
+const rimLight = new THREE.PointLight(0x00ffe7, 0.5, 50);
+rimLight.position.set(10, 15, -20);
+scene.add(rimLight);
+
+// ─── GRID FLOOR ──────────────────────────────────────────────────────────────
+const FLOOR_Y = -8;
+const FLOOR_SIZE = 60;
+
+const floorGeo = new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE, 40, 40);
+const floorMat = new THREE.MeshStandardMaterial({
+  color: 0x0d1a2a,
+  roughness: 0.9,
+  metalness: 0.1,
+  wireframe: false,
+});
+const floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = FLOOR_Y;
+floor.receiveShadow = true;
+scene.add(floor);
+
+const gridHelper = new THREE.GridHelper(FLOOR_SIZE, 30, 0x00ffe7, 0x0a2030);
+gridHelper.position.y = FLOOR_Y + 0.01;
+scene.add(gridHelper);
+
+// walls
+const wallGeo = new THREE.PlaneGeometry(FLOOR_SIZE, 30);
+const wallMat = new THREE.MeshStandardMaterial({ color: 0x050d18, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+const walls = [];
+const wallDefs = [
+  { pos: [0, FLOOR_Y + 15, -FLOOR_SIZE/2], rot: [0, 0, 0] },
+  { pos: [0, FLOOR_Y + 15,  FLOOR_SIZE/2], rot: [0, Math.PI, 0] },
+  { pos: [-FLOOR_SIZE/2, FLOOR_Y + 15, 0], rot: [0,  Math.PI/2, 0] },
+  { pos: [ FLOOR_SIZE/2, FLOOR_Y + 15, 0], rot: [0, -Math.PI/2, 0] },
+];
+wallDefs.forEach(d => {
+  const w = new THREE.Mesh(wallGeo, wallMat.clone());
+  w.position.set(...d.pos); w.rotation.set(...d.rot);
+  w.visible = false;
+  scene.add(w); walls.push(w);
+});
+
+// ─── PHYSICS STATE ───────────────────────────────────────────────────────────
+let gravity = 9.8, bounce = 0.55, friction = 0.88, launchPower = 12;
+let floorOn = true, wallsOn = false, trailsOn = true, shadowsOn = true;
+let simTime = 0;
+const bodies = [];
+const HALF = FLOOR_SIZE / 2 - 0.5;
+
+const COLORS = [
+  '#00ffe7','#ff4d6d','#f5c518','#8b5cf6','#22d3ee',
+  '#fb923c','#4ade80','#f472b6','#ffffff','#fbbf24'
+];
+let selectedColor = COLORS[0];
+let selectedShape = 'sphere';
+
+// ─── TRAIL SYSTEM ────────────────────────────────────────────────────────────
+class Trail {
+  constructor(color) {
+    this.points = [];
+    this.maxLen = 28;
+    this.geo = new THREE.BufferGeometry();
+    this.mat = new THREE.LineBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.45 });
+    this.line = new THREE.Line(this.geo, this.mat);
+    scene.add(this.line);
+  }
+  update(pos) {
+    this.points.push(pos.clone());
+    if (this.points.length > this.maxLen) this.points.shift();
+    const arr = new Float32Array(this.points.length * 3);
+    this.points.forEach((p, i) => { arr[i*3]=p.x; arr[i*3+1]=p.y; arr[i*3+2]=p.z; });
+    this.geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  }
+  dispose() {
+    scene.remove(this.line);
+    this.geo.dispose();
+    this.mat.dispose();
+  }
+}
+
+// ─── BODY FACTORY ────────────────────────────────────────────────────────────
+function createGeometry(shape) {
+  switch(shape) {
+    case 'sphere': return new THREE.SphereGeometry(0.55, 18, 18);
+    case 'box':    return new THREE.BoxGeometry(0.9, 0.9, 0.9);
+    case 'cone':   return new THREE.ConeGeometry(0.55, 1.1, 12);
+    case 'cyl':    return new THREE.CylinderGeometry(0.4, 0.4, 1.0, 14);
+    case 'torus':  return new THREE.TorusGeometry(0.45, 0.2, 10, 20);
+    case 'icosa':  return new THREE.IcosahedronGeometry(0.6, 0);
+    default:       return new THREE.SphereGeometry(0.55, 16, 16);
+  }
+}
+
+function shapeRadius(shape) {
+  return shape === 'box' ? 0.55 : shape === 'torus' ? 0.65 : 0.55;
+}
+
+function spawnBody(position, velocity, shape, hexColor) {
+  const col = new THREE.Color(hexColor);
+  const geo = createGeometry(shape);
+  const mat = new THREE.MeshStandardMaterial({
+    color: col,
+    emissive: col,
+    emissiveIntensity: 0.15,
+    roughness: 0.35,
+    metalness: 0.5,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = shadowsOn;
+  mesh.receiveShadow = true;
+  mesh.position.copy(position);
+
+  // random initial rotation
+  mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
+  scene.add(mesh);
+
+  const trail = trailsOn ? new Trail(hexColor) : null;
+  const body = {
+    mesh, trail, shape,
+    vel: velocity.clone(),
+    angVel: new THREE.Vector3(
+      (Math.random()-0.5)*4, (Math.random()-0.5)*4, (Math.random()-0.5)*4
+    ),
+    radius: shapeRadius(shape),
+    alive: true,
+    age: 0,
+  };
+  bodies.push(body);
+  updateStats();
+  return body;
+}
+
+// ─── PHYSICS STEP ────────────────────────────────────────────────────────────
+function physicsStep(dt) {
+  dt = Math.min(dt, 0.05);
+  simTime += dt;
+
+  for (let i = bodies.length - 1; i >= 0; i--) {
+    const b = bodies[i];
+    b.age += dt;
+
+    // gravity
+    b.vel.y -= gravity * dt;
+
+    // integrate position
+    b.mesh.position.addScaledVector(b.vel, dt);
+
+    // angular
+    b.mesh.rotation.x += b.angVel.x * dt;
+    b.mesh.rotation.y += b.angVel.y * dt;
+    b.mesh.rotation.z += b.angVel.z * dt;
+
+    const pos = b.mesh.position;
+    const r = b.radius;
+
+    // floor collision
+    if (floorOn && pos.y - r < FLOOR_Y) {
+      pos.y = FLOOR_Y + r;
+      b.vel.y *= -bounce;
+      b.vel.x *= friction;
+      b.vel.z *= friction;
+      b.angVel.multiplyScalar(friction);
+      // dampen tiny bounces
+      if (Math.abs(b.vel.y) < 0.4) b.vel.y = 0;
+    }
+
+    // wall collisions
+    if (wallsOn) {
+      if (pos.x - r < -HALF) { pos.x = -HALF + r; b.vel.x *= -bounce; }
+      if (pos.x + r >  HALF) { pos.x =  HALF - r; b.vel.x *= -bounce; }
+      if (pos.z - r < -HALF) { pos.z = -HALF + r; b.vel.z *= -bounce; }
+      if (pos.z + r >  HALF) { pos.z =  HALF - r; b.vel.z *= -bounce; }
+    }
+
+    // body-body collisions (simple sphere approximation)
+    for (let j = i - 1; j >= 0; j--) {
+      const b2 = bodies[j];
+      const diff = new THREE.Vector3().subVectors(pos, b2.mesh.position);
+      const dist = diff.length();
+      const minDist = b.radius + b2.radius;
+      if (dist < minDist && dist > 0.001) {
+        const norm = diff.normalize();
+        const overlap = minDist - dist;
+        b.mesh.position.addScaledVector(norm, overlap * 0.5);
+        b2.mesh.position.addScaledVector(norm, -overlap * 0.5);
+        // velocity exchange
+        const relVel = b.vel.dot(norm) - b2.vel.dot(norm);
+        if (relVel < 0) {
+          const impulse = relVel * -(1 + bounce) * 0.5;
+          b.vel.addScaledVector(norm, impulse);
+          b2.vel.addScaledVector(norm, -impulse);
+        }
+      }
+    }
+
+    // cull if fallen way out of bounds
+    if (pos.y < FLOOR_Y - 80) {
+      b.trail && b.trail.dispose();
+      b.mesh.geometry.dispose();
+      b.mesh.material.dispose();
+      scene.remove(b.mesh);
+      bodies.splice(i, 1);
+      updateStats();
+      continue;
+    }
+
+    if (trailsOn && b.trail) b.trail.update(pos);
+    else if (trailsOn && !b.trail) {
+      b.trail = new Trail(b.mesh.material.color.getStyle());
+    }
+  }
+}
+
+// ─── CAMERA ORBIT ────────────────────────────────────────────────────────────
+let isDragging = false, lastMouse = { x: 0, y: 0 };
+let spherical = { theta: 0.4, phi: 0.5, r: 30 };
+
+function updateCamera() {
+  const x = spherical.r * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+  const y = spherical.r * Math.cos(spherical.phi);
+  const z = spherical.r * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  camera.position.set(x, y + 4, z);
+  camera.lookAt(0, 2, 0);
+}
+
+canvas.addEventListener('mousedown', e => {
+  if (e.target === canvas || e.target.id === 'three') {
+    isDragging = true;
+    lastMouse = { x: e.clientX, y: e.clientY };
+  }
+});
+document.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+  spherical.theta -= dx * 0.005;
+  spherical.phi = Math.max(0.08, Math.min(Math.PI * 0.48, spherical.phi + dy * 0.005));
+  lastMouse = { x: e.clientX, y: e.clientY };
+  updateCamera();
+});
+document.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('wheel', e => {
+  spherical.r = Math.max(5, Math.min(80, spherical.r + e.deltaY * 0.04));
+  updateCamera();
+}, { passive: true });
+
+// ─── LAUNCH ON CLICK ─────────────────────────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+canvas.addEventListener('click', e => {
+  if (isDragging) return;
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const dir = raycaster.ray.direction.clone().normalize();
+  const spawnPos = camera.position.clone().addScaledVector(dir, 2);
+  const vel = dir.clone().multiplyScalar(launchPower);
+  spawnBody(spawnPos, vel, selectedShape, selectedColor);
+});
+
+// ─── UI CONTROLS ─────────────────────────────────────────────────────────────
+function mkSlider(id, valId, statId, setter, fmt) {
+  const sl = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  sl.addEventListener('input', () => {
+    const v = parseFloat(sl.value);
+    setter(v);
+    vl.textContent = fmt ? fmt(v) : v;
+    if (statId) document.getElementById(statId).textContent = fmt ? fmt(v) : v;
+  });
+}
+mkSlider('slider-gravity', 'val-gravity', 'stat-gravity', v => { gravity = v; }, v => v.toFixed(1) + ' m/s²');
+mkSlider('slider-bounce', 'val-bounce', null, v => { bounce = v; }, v => v.toFixed(2));
+mkSlider('slider-friction', 'val-friction', null, v => { friction = v; }, v => v.toFixed(2));
+mkSlider('slider-power', 'val-power', null, v => { launchPower = v; }, v => v.toFixed(1));
+
+// shape
+document.getElementById('shape-picker').querySelectorAll('.shape-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedShape = btn.dataset.shape;
+  });
+});
+
+// color dots
+const cpEl = document.getElementById('color-picker');
+COLORS.forEach(hex => {
+  const dot = document.createElement('div');
+  dot.className = 'color-dot' + (hex === selectedColor ? ' active' : '');
+  dot.style.background = hex;
+  dot.title = hex;
+  dot.addEventListener('click', () => {
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    dot.classList.add('active');
+    selectedColor = hex;
+  });
+  cpEl.appendChild(dot);
+});
+
+// spawn button
+document.getElementById('btn-spawn').addEventListener('click', () => {
+  const pos = new THREE.Vector3(
+    (Math.random()-0.5)*4, FLOOR_Y + 12, (Math.random()-0.5)*4
+  );
+  spawnBody(pos, new THREE.Vector3((Math.random()-0.5)*4, 4, (Math.random()-0.5)*4), selectedShape, selectedColor);
+});
+
+// rain
+let rainInterval = null;
+document.getElementById('btn-rain').addEventListener('click', () => {
+  if (rainInterval) {
+    clearInterval(rainInterval);
+    rainInterval = null;
+    document.getElementById('btn-rain').textContent = '☂ Object Rain';
+    return;
+  }
+  document.getElementById('btn-rain').textContent = '■ Stop Rain';
+  rainInterval = setInterval(() => {
+    if (bodies.length > 120) return;
+    const pos = new THREE.Vector3((Math.random()-0.5)*20, FLOOR_Y+20, (Math.random()-0.5)*20);
+    const col = COLORS[Math.floor(Math.random()*COLORS.length)];
+    const shapes = ['sphere','box','cone','cyl','torus','icosa'];
+    spawnBody(pos, new THREE.Vector3((Math.random()-0.5)*3, 0, (Math.random()-0.5)*3),
+      shapes[Math.floor(Math.random()*shapes.length)], col);
+  }, 150);
+});
+
+document.getElementById('btn-clear').addEventListener('click', clearAll);
+function clearAll() {
+  bodies.forEach(b => {
+    b.trail && b.trail.dispose();
+    b.mesh.geometry.dispose();
+    b.mesh.material.dispose();
+    scene.remove(b.mesh);
+  });
+  bodies.length = 0;
+  updateStats();
+  toast('All objects cleared');
+}
+
+// toggles
+document.getElementById('btn-trails').addEventListener('click', function() {
+  trailsOn = !trailsOn;
+  this.textContent = trailsOn ? 'Trails ON' : 'Trails OFF';
+  this.classList.toggle('active', trailsOn);
+  if (!trailsOn) {
+    bodies.forEach(b => { if (b.trail) { b.trail.dispose(); b.trail = null; } });
+  }
+});
+
+document.getElementById('btn-shadows').addEventListener('click', function() {
+  shadowsOn = !shadowsOn;
+  this.textContent = shadowsOn ? 'Shadows ON' : 'Shadows OFF';
+  this.classList.toggle('active', shadowsOn);
+  renderer.shadowMap.enabled = shadowsOn;
+  bodies.forEach(b => { b.mesh.castShadow = shadowsOn; });
+});
+
+document.getElementById('btn-floor').addEventListener('click', function() {
+  floorOn = !floorOn;
+  this.textContent = floorOn ? 'Floor ON' : 'Floor OFF';
+  this.classList.toggle('active', floorOn);
+  floor.visible = floorOn;
+  gridHelper.visible = floorOn;
+});
+
+document.getElementById('btn-walls').addEventListener('click', function() {
+  wallsOn = !wallsOn;
+  this.textContent = wallsOn ? 'Walls ON' : 'Walls OFF';
+  this.classList.toggle('active', wallsOn);
+  walls.forEach(w => w.visible = wallsOn);
+});
+
+// keyboard
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    document.getElementById('btn-spawn').click();
+  }
+  if (e.key === 'c' || e.key === 'C') clearAll();
+  if (e.key === 'r' || e.key === 'R') document.getElementById('btn-rain').click();
+  if (e.key === 'g' || e.key === 'G') {
+    gravity = gravity > 0 ? 0 : parseFloat(document.getElementById('slider-gravity').value) || 9.8;
+    document.getElementById('stat-gravity').textContent = gravity.toFixed(1) + ' m/s²';
+    toast(gravity === 0 ? 'Gravity disabled' : 'Gravity enabled');
+  }
+});
+
+// ─── STATS + TOAST ───────────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('stat-objects').textContent = bodies.length;
+}
+
+let fpsArr = [], lastFpsTime = performance.now(), frameCount = 0;
+function updateFps(now) {
+  frameCount++;
+  if (now - lastFpsTime > 500) {
+    const fps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+    document.getElementById('stat-fps').textContent = fps;
+    document.getElementById('stat-time').textContent = simTime.toFixed(1) + 's';
+    frameCount = 0; lastFpsTime = now;
+  }
+}
+
+let toastTimeout;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { el.style.opacity = '0'; }, 1800);
+}
+
+// ─── RENDER LOOP ─────────────────────────────────────────────────────────────
+let lastTime = performance.now();
+updateCamera();
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+
+  physicsStep(dt);
+  updateFps(now);
+
+  // subtle light pulse
+  rimLight.intensity = 0.4 + 0.1 * Math.sin(now * 0.001);
+
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+// ─── RESIZE ──────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// seed a few objects on load
+setTimeout(() => {
+  ['sphere','box','icosa','torus','cone'].forEach((shape, i) => {
+    const pos = new THREE.Vector3((i-2)*3, FLOOR_Y+10, (Math.random()-0.5)*4);
+    spawnBody(pos, new THREE.Vector3((Math.random()-0.5)*3, 5, (Math.random()-0.5)*2), shape, COLORS[i]);
+  });
+  toast('Click canvas to launch objects!');
+}, 300);
+</script>
+</body>
+</html>
