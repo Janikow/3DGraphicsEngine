@@ -92,12 +92,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
       <button class="tab-btn" data-tab="connect">Connect</button>
     </div>
     <div id="tool-bar">
-      <button class="tool-btn active" id="btn-grab-tool">Grab</button>
-      <button class="tool-btn" id="btn-push-tool">Push</button>
-      <button class="tool-btn" id="btn-explode-tool">Explode</button>
-      <button class="tool-btn" id="btn-link-tool">Link</button>
-      <button class="tool-btn" id="btn-cut-tool">Cut</button>
-      <button class="tool-btn red" id="btn-clear">Clear</button>
+      <button class="tool-btn active" id="btn-grab-tool">✋ Grab</button>
+      <button class="tool-btn" id="btn-push-tool">💨 Push</button>
+      <button class="tool-btn" id="btn-explode-tool">💥 Explode</button>
+      <button class="tool-btn" id="btn-link-tool">🔗 Link</button>
+      <button class="tool-btn" id="btn-cut-tool">✂️ Cut</button>
+      <button class="tool-btn red" id="btn-clear">✕ Clear</button>
     </div>
   </div>
 
@@ -153,7 +153,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
         <button class="abtn" id="btn-floor-toggle">Floor: ON</button>
         <button class="abtn" id="btn-walls-toggle">Walls: OFF</button>
         <button class="abtn" id="btn-zerog">Zero-G Toggle</button>
-        <button class="abtn d" id="btn-nuke">Nuke Scene</button>
+        <button class="abtn d" id="btn-nuke">💥 Nuke Scene</button>
       </div>
 
       <!-- CONNECT -->
@@ -448,60 +448,63 @@ Spring.prototype.apply = function(dt) {
   }
 };
 
-// ── Physics step ──
+// ── Physics step  (sub-stepped for stability) ──
 function physicsStep(dt) {
-  dt = Math.min(dt, 0.032);
+  const SUB = 3;                       // sub-steps per frame
+  const sdt = Math.min(dt, 0.032) / SUB;
   simTime += dt;
 
-  springs.forEach(s=>s.apply(dt));
+  for(let sub=0; sub<SUB; sub++){
+    springs.forEach(s=>s.apply(sdt));
 
-  for(let i=bodies.length-1;i>=0;i--) {
-    const b=bodies[i];
-    if(b.pinned) continue;
+    for(let i=bodies.length-1;i>=0;i--) {
+      const b=bodies[i];
+      if(b.pinned) continue;
 
-    b.vel.y -= gravity*dt;
-    b.vel.multiplyScalar(1-airDrag);
-    b.angVel.multiplyScalar(.985);
+      b.vel.y -= gravity*sdt;
+      b.vel.multiplyScalar(1 - airDrag/SUB);
+      b.angVel.multiplyScalar(1 - (1-.985)/SUB);
 
-    b.pos.addScaledVector(b.vel,dt);
-    b.mesh.rotation.x += b.angVel.x*dt;
-    b.mesh.rotation.y += b.angVel.y*dt;
-    b.mesh.rotation.z += b.angVel.z*dt;
+      b.pos.addScaledVector(b.vel,sdt);
+      b.mesh.rotation.x += b.angVel.x*sdt;
+      b.mesh.rotation.y += b.angVel.y*sdt;
+      b.mesh.rotation.z += b.angVel.z*sdt;
 
-    const r=b.radius;
-    if(floorOn && b.pos.y-r < FLOOR_Y) {
-      b.pos.y=FLOOR_Y+r;
-      b.vel.y*=-bounce;
-      b.vel.x*=friction; b.vel.z*=friction;
-      b.angVel.multiplyScalar(friction);
-      if(Math.abs(b.vel.y)<0.28) b.vel.y=0;
+      const r=b.radius;
+      if(floorOn && b.pos.y-r < FLOOR_Y) {
+        b.pos.y=FLOOR_Y+r;
+        b.vel.y*=-bounce;
+        b.vel.x*=friction; b.vel.z*=friction;
+        b.angVel.multiplyScalar(friction);
+        if(Math.abs(b.vel.y)<0.28) b.vel.y=0;
+      }
+      if(wallsOn){
+        if(b.pos.x-r<-HALF){b.pos.x=-HALF+r;b.vel.x*=-bounce;}
+        if(b.pos.x+r> HALF){b.pos.x= HALF-r;b.vel.x*=-bounce;}
+        if(b.pos.z-r<-HALF){b.pos.z=-HALF+r;b.vel.z*=-bounce;}
+        if(b.pos.z+r> HALF){b.pos.z= HALF-r;b.vel.z*=-bounce;}
+      }
+      if(b.pos.y < FLOOR_Y-100){ removeBodyAt(i); updateStats(); continue; }
+      if(b.trail) b.trail.update(b.pos);
     }
-    if(wallsOn){
-      if(b.pos.x-r<-HALF){b.pos.x=-HALF+r;b.vel.x*=-bounce;}
-      if(b.pos.x+r> HALF){b.pos.x= HALF-r;b.vel.x*=-bounce;}
-      if(b.pos.z-r<-HALF){b.pos.z=-HALF+r;b.vel.z*=-bounce;}
-      if(b.pos.z+r> HALF){b.pos.z= HALF-r;b.vel.z*=-bounce;}
-    }
-    if(b.pos.y < FLOOR_Y-100){ removeBodyAt(i); updateStats(); continue; }
-    if(b.trail) b.trail.update(b.pos);
-  }
 
-  // body–body collision (skip same ragdoll)
-  for(let i=0;i<bodies.length;i++){
-    for(let j=i+1;j<bodies.length;j++){
-      const a=bodies[i],b2=bodies[j];
-      if(a.ragId>=0 && a.ragId===b2.ragId) continue;
-      const d=new THREE.Vector3().subVectors(a.pos,b2.pos);
-      const dist=d.length(), minD=a.radius+b2.radius;
-      if(dist<minD && dist>0.001){
-        const n=d.divideScalar(dist), ov=(minD-dist)*.5;
-        if(!a.pinned) a.pos.addScaledVector(n, ov);
-        if(!b2.pinned)b2.pos.addScaledVector(n,-ov);
-        const rv=a.vel.dot(n)-b2.vel.dot(n);
-        if(rv<0){
-          const imp=rv*(-(1+bounce))*.5;
-          if(!a.pinned)  a.vel.addScaledVector(n, imp);
-          if(!b2.pinned) b2.vel.addScaledVector(n,-imp);
+    // body–body collision (skip same ragdoll)
+    for(let i=0;i<bodies.length;i++){
+      for(let j=i+1;j<bodies.length;j++){
+        const a=bodies[i],b2=bodies[j];
+        if(a.ragId>=0 && a.ragId===b2.ragId) continue;
+        const d=new THREE.Vector3().subVectors(a.pos,b2.pos);
+        const dist=d.length(), minD=a.radius+b2.radius;
+        if(dist<minD && dist>0.001){
+          const n=d.divideScalar(dist), ov=(minD-dist)*.5;
+          if(!a.pinned) a.pos.addScaledVector(n, ov);
+          if(!b2.pinned)b2.pos.addScaledVector(n,-ov);
+          const rv=a.vel.dot(n)-b2.vel.dot(n);
+          if(rv<0){
+            const imp=rv*(-(1+bounce))*.5;
+            if(!a.pinned)  a.vel.addScaledVector(n, imp);
+            if(!b2.pinned) b2.vel.addScaledVector(n,-imp);
+          }
         }
       }
     }
@@ -546,107 +549,210 @@ function spawnBody(pos, vel, shape, hexColor, scale=1, withTrail=true) {
 }
 
 // ════════════════════════════════════════════
-//  RAGDOLL
+//  RAGDOLL  (v2 — pose-spring + sub-step)
 // ════════════════════════════════════════════
-let jointK=200, jointD=14, limbMass=1.0;
+let jointK=320, jointD=22, limbMass=1.0;
 let ragIdCounter=0;
 
-// colors
-const C_SKIN=0xe8c49a, C_SHIRT=0x1e4488, C_PANTS=0x1a1a3a, C_SHOE=0x1a0d0d, C_HAIR=0x2a1a0a;
+const C_SKIN=0xe8c49a, C_SHIRT=0x1e4488, C_PANTS=0x1a1a3a, C_SHOE=0x221111, C_HAIR=0x2a1a0a;
 
-function limbBody(geo, color, pos, rx=0,ry=0,rz=0, r=.18, mass=null) {
-  const mat=new THREE.MeshStandardMaterial({color, roughness:.75, metalness:.05});
-  const mesh=new THREE.Mesh(geo,mat);
-  mesh.castShadow=true; mesh.position.copy(pos); mesh.rotation.set(rx,ry,rz);
+/* A PoseSpring keeps one body anchored relative to another body's coordinate
+   frame.  It fires a spring from bodyB's current world-pos toward the target
+   world-pos derived from bodyA's position + a local offset that rotates with
+   bodyA.  This stops limbs from flopping away from the torso even under load. */
+class PoseSpring {
+  constructor(parent, child, localOffset, k, d) {
+    this.parent = parent;       // reference body (e.g. torso)
+    this.child  = child;        // body being pulled (e.g. upper-arm)
+    this.offset = localOffset.clone(); // desired position relative to parent
+    this.k = k;
+    this.d = d;
+  }
+  apply(dt) {
+    // Rotate offset by parent's mesh quaternion
+    const worldTarget = this.offset.clone()
+      .applyQuaternion(this.parent.mesh.quaternion)
+      .add(this.parent.pos);
+    const diff = new THREE.Vector3().subVectors(worldTarget, this.child.pos);
+    const relV = new THREE.Vector3().subVectors(
+      this.parent.vel, this.child.vel); // velocity of target vs child
+    const force = diff.multiplyScalar(this.k).addScaledVector(relV, this.d);
+    if (!this.child.pinned)  this.child.vel.addScaledVector(force,  dt / this.child.mass);
+    if (!this.parent.pinned) this.parent.vel.addScaledVector(force, -dt / this.parent.mass);
+  }
+}
+
+function makeLimb(geo, color, pos, rx=0,ry=0,rz=0, radius=.14, mass=null) {
+  const mat = new THREE.MeshStandardMaterial({color, roughness:.72, metalness:.06});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.position.copy(pos);
+  mesh.rotation.set(rx, ry, rz);
   scene.add(mesh);
-  const b=new RigidBody(mesh, r, mass||limbMass);
-  b.isLimb=true;
+  const b = new RigidBody(mesh, radius, mass || limbMass);
+  b.isLimb = true;
   return b;
 }
 
 function spawnRagdoll(origin, opts={}) {
-  const id=ragIdCounter++;
+  const id   = ragIdCounter++;
   const ox=origin.x, oy=origin.y, oz=origin.z;
-  const falling=!!opts.falling;
+  const falling = !!opts.falling;
 
-  // ── Body parts (bottom to top) ──
-  // Feet
-  const lFoot=limbBody(new THREE.BoxGeometry(.16,.1,.28),C_SHOE, new THREE.Vector3(ox-.16,oy+.74,oz+.06),.0,.0,.0,.1);
-  const rFoot=limbBody(new THREE.BoxGeometry(.16,.1,.28),C_SHOE, new THREE.Vector3(ox+.16,oy+.74,oz+.06),.0,.0,.0,.1);
+  /* ── proportions: standing height ~3.6 units ── */
+  const S  = 1.0; // scale factor — tweak if needed
 
-  // Shins
-  const lShin=limbBody(new THREE.CylinderGeometry(.08,.09,.44,10),C_SKIN, new THREE.Vector3(ox-.16,oy+1.08,oz),.0,.0,.0,.1);
-  const rShin=limbBody(new THREE.CylinderGeometry(.08,.09,.44,10),C_SKIN, new THREE.Vector3(ox+.16,oy+1.08,oz),.0,.0,.0,.1);
+  // heights above origin
+  const Y_FOOT  = oy + 0.05*S;
+  const Y_ANKLE = oy + 0.12*S;
+  const Y_SHIN  = oy + 0.55*S;
+  const Y_KNEE  = oy + 1.02*S;
+  const Y_THIGH = oy + 1.42*S;
+  const Y_HIP   = oy + 1.82*S;
+  const Y_BELLY = oy + 2.18*S;
+  const Y_CHEST = oy + 2.60*S;
+  const Y_SHOULDER = oy + 2.85*S;
+  const Y_NECK  = oy + 3.05*S;
+  const Y_HEAD  = oy + 3.42*S;
+  const X_HIP   = 0.14*S;
+  const X_SHOULDER = 0.30*S;
+  const X_ELBOW = 0.58*S;
+  const X_HAND  = 0.82*S;
 
-  // Thighs
-  const lThigh=limbBody(new THREE.CylinderGeometry(.1,.1,.44,10),C_PANTS, new THREE.Vector3(ox-.16,oy+1.58,oz),.0,.0,.0,.12);
-  const rThigh=limbBody(new THREE.CylinderGeometry(.1,.1,.44,10),C_PANTS, new THREE.Vector3(ox+.16,oy+1.58,oz),.0,.0,.0,.12);
+  // ── feet ──
+  const lFoot = makeLimb(new THREE.BoxGeometry(.17*S,.09*S,.30*S), C_SHOE,
+    new THREE.Vector3(ox-X_HIP, Y_FOOT, oz+.06*S), 0,0,0, .10*S, .8);
+  const rFoot = makeLimb(new THREE.BoxGeometry(.17*S,.09*S,.30*S), C_SHOE,
+    new THREE.Vector3(ox+X_HIP, Y_FOOT, oz+.06*S), 0,0,0, .10*S, .8);
 
-  // Pelvis
-  const pelvis=limbBody(new THREE.BoxGeometry(.42,.28,.22),C_PANTS, new THREE.Vector3(ox,oy+2.0,oz),.0,.0,.0,.24,1.6);
+  // ── shins ──
+  const lShin = makeLimb(new THREE.CylinderGeometry(.075*S,.085*S,.46*S,10), C_SKIN,
+    new THREE.Vector3(ox-X_HIP, Y_SHIN, oz), 0,0,0, .095*S, 1.2);
+  const rShin = makeLimb(new THREE.CylinderGeometry(.075*S,.085*S,.46*S,10), C_SKIN,
+    new THREE.Vector3(ox+X_HIP, Y_SHIN, oz), 0,0,0, .095*S, 1.2);
 
-  // Torso
-  const torso=limbBody(new THREE.BoxGeometry(.48,.55,.24),C_SHIRT, new THREE.Vector3(ox,oy+2.62,oz),.0,.0,.0,.3,1.9);
+  // ── thighs ──
+  const lThigh = makeLimb(new THREE.CylinderGeometry(.10*S,.10*S,.46*S,10), C_PANTS,
+    new THREE.Vector3(ox-X_HIP, Y_THIGH, oz), 0,0,0, .11*S, 1.8);
+  const rThigh = makeLimb(new THREE.CylinderGeometry(.10*S,.10*S,.46*S,10), C_PANTS,
+    new THREE.Vector3(ox+X_HIP, Y_THIGH, oz), 0,0,0, .11*S, 1.8);
 
-  // Upper arms
-  const lUA=limbBody(new THREE.CylinderGeometry(.09,.09,.38,8),C_SHIRT, new THREE.Vector3(ox-.46,oy+2.8,oz),0,0,Math.PI/2,.1);
-  const rUA=limbBody(new THREE.CylinderGeometry(.09,.09,.38,8),C_SHIRT, new THREE.Vector3(ox+.46,oy+2.8,oz),0,0,Math.PI/2,.1);
+  // ── pelvis ──
+  const pelvis = makeLimb(new THREE.BoxGeometry(.38*S,.26*S,.22*S), C_PANTS,
+    new THREE.Vector3(ox, Y_HIP, oz), 0,0,0, .22*S, 3.5);
 
-  // Forearms
-  const lFA=limbBody(new THREE.CylinderGeometry(.075,.075,.35,8),C_SKIN, new THREE.Vector3(ox-.82,oy+2.8,oz),0,0,Math.PI/2,.09);
-  const rFA=limbBody(new THREE.CylinderGeometry(.075,.075,.35,8),C_SKIN, new THREE.Vector3(ox+.82,oy+2.8,oz),0,0,Math.PI/2,.09);
+  // ── abdomen ──
+  const belly = makeLimb(new THREE.CylinderGeometry(.15*S,.18*S,.30*S,10), C_SKIN,
+    new THREE.Vector3(ox, Y_BELLY, oz), 0,0,0, .18*S, 2.0);
 
-  // Neck
-  const neck=limbBody(new THREE.CylinderGeometry(.07,.08,.18,8),C_SKIN, new THREE.Vector3(ox,oy+3.1,oz),.0,.0,.0,.08,.4);
+  // ── chest ──
+  const chest = makeLimb(new THREE.BoxGeometry(.44*S,.38*S,.22*S), C_SHIRT,
+    new THREE.Vector3(ox, Y_CHEST, oz), 0,0,0, .26*S, 4.0);
 
-  // Head
-  const head=limbBody(new THREE.SphereGeometry(.25,12,12),C_SKIN, new THREE.Vector3(ox,oy+3.5,oz),.0,.0,.0,.26,.8);
-  // Hair cap
-  const hairGeo=new THREE.SphereGeometry(.255,10,6,0,Math.PI*2,0,Math.PI*.5);
-  const hairMat=new THREE.MeshStandardMaterial({color:C_HAIR,roughness:.9});
-  const hairM=new THREE.Mesh(hairGeo,hairMat);
-  hairM.position.set(0,.03,0); head.mesh.add(hairM);
-  // Eyes
-  const eyeGeo=new THREE.SphereGeometry(.04,6,6);
-  const eyeMat=new THREE.MeshStandardMaterial({color:0x111111});
-  const eL=new THREE.Mesh(eyeGeo,eyeMat); eL.position.set(-.09,.05,.23); head.mesh.add(eL);
-  const eR=new THREE.Mesh(eyeGeo,eyeMat); eR.position.set( .09,.05,.23); head.mesh.add(eR);
+  // ── upper arms ──
+  const lUA = makeLimb(new THREE.CylinderGeometry(.075*S,.075*S,.36*S,8), C_SHIRT,
+    new THREE.Vector3(ox-X_ELBOW+.04*S, Y_SHOULDER-.04*S, oz), 0,0, Math.PI/2, .09*S, 1.0);
+  const rUA = makeLimb(new THREE.CylinderGeometry(.075*S,.075*S,.36*S,8), C_SHIRT,
+    new THREE.Vector3(ox+X_ELBOW-.04*S, Y_SHOULDER-.04*S, oz), 0,0, Math.PI/2, .09*S, 1.0);
 
-  const limbs=[lFoot,rFoot,lShin,rShin,lThigh,rThigh,pelvis,torso,lUA,rUA,lFA,rFA,neck,head];
+  // ── forearms ──
+  const lFA = makeLimb(new THREE.CylinderGeometry(.063*S,.063*S,.33*S,8), C_SKIN,
+    new THREE.Vector3(ox-X_HAND+.04*S, Y_SHOULDER-.04*S, oz), 0,0, Math.PI/2, .08*S, .8);
+  const rFA = makeLimb(new THREE.CylinderGeometry(.063*S,.063*S,.33*S,8), C_SKIN,
+    new THREE.Vector3(ox+X_HAND-.04*S, Y_SHOULDER-.04*S, oz), 0,0, Math.PI/2, .08*S, .8);
+
+  // ── neck ──
+  const neck = makeLimb(new THREE.CylinderGeometry(.065*S,.075*S,.20*S,8), C_SKIN,
+    new THREE.Vector3(ox, Y_NECK, oz), 0,0,0, .075*S, .5);
+
+  // ── head ──
+  const head = makeLimb(new THREE.SphereGeometry(.245*S,14,14), C_SKIN,
+    new THREE.Vector3(ox, Y_HEAD, oz), 0,0,0, .25*S, 2.0);
+
+  // head decorations
+  const hairMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(.25*S,12,7,0,Math.PI*2,0,Math.PI*.52),
+    new THREE.MeshStandardMaterial({color:C_HAIR, roughness:.9}));
+  hairMesh.position.set(0,.02*S,0); head.mesh.add(hairMesh);
+  const eyeGeo = new THREE.SphereGeometry(.038*S,6,6);
+  const eyeMat = new THREE.MeshStandardMaterial({color:0x111111});
+  const eL=new THREE.Mesh(eyeGeo,eyeMat); eL.position.set(-.085*S,.06*S,.22*S); head.mesh.add(eL);
+  const eR=new THREE.Mesh(eyeGeo,eyeMat); eR.position.set( .085*S,.06*S,.22*S); head.mesh.add(eR);
+  // simple mouth line
+  const mouthGeo=new THREE.BoxGeometry(.09*S,.012*S,.01*S);
+  const mouthMat=new THREE.MeshStandardMaterial({color:0x771111});
+  const mouth=new THREE.Mesh(mouthGeo,mouthMat); mouth.position.set(0,-.06*S,.24*S); head.mesh.add(mouth);
+
+  const limbs=[lFoot,rFoot,lShin,rShin,lThigh,rThigh,pelvis,belly,chest,lUA,rUA,lFA,rFA,neck,head];
   limbs.forEach(lb=>{ lb.ragId=id; bodies.push(lb); });
 
-  // ── Spring joints ──
-  const K=jointK, D=jointD;
-  const JS=[];
-  function addS(a,b,rest){ const s=new Spring(a,b,rest,K,D); springs.push(s); JS.push(s); }
+  /* ════════════════════════════════════════
+     JOINTS — two layers:
+     1. Distance springs  (structural / collisions)
+     2. PoseSprings       (keep limb in correct socket)
+     The combo gives stiff joints that resist wrenching apart while still
+     having the pose-correcting force that keeps a standing posture.
+  ════════════════════════════════════════ */
+  const K  = jointK;
+  const D  = jointD;
+  const KP = jointK * 1.4;   // pose springs are stiffer
+  const DP = jointD  * 1.2;
+  const JS = [];
 
-  addS(lFoot,  lShin,  .28);
-  addS(rFoot,  rShin,  .28);
-  addS(lShin,  lThigh, .28);
-  addS(rShin,  rThigh, .28);
-  addS(lThigh, pelvis, .26);
-  addS(rThigh, pelvis, .26);
-  addS(pelvis, torso,  .38);
-  addS(torso,  neck,   .38);
-  addS(neck,   head,   .26);
-  addS(torso,  lUA,    .3);
-  addS(torso,  rUA,    .3);
-  addS(lUA,    lFA,    .26);
-  addS(rUA,    rFA,    .26);
-
-  // Stability cross braces
-  addS(lThigh, rThigh, .32);
-  addS(pelvis, head,   1.5);
-  addS(lUA,    torso,  .55);
-  addS(rUA,    torso,  .55);
-
-  if(falling){
-    const v=new THREE.Vector3((Math.random()-.5)*5,4+Math.random()*5,(Math.random()-.5)*5);
-    limbs.forEach(lb=>lb.vel.copy(v));
-    limbs.forEach(lb=>lb.angVel.set((Math.random()-.5)*8,(Math.random()-.5)*8,(Math.random()-.5)*8));
+  function dist3(a,b){ return a.pos.distanceTo(b.pos); }
+  function addDist(a,b,slack=0){
+    const s=new Spring(a,b, dist3(a,b)+slack, K, D);
+    springs.push(s); JS.push(s); return s;
+  }
+  function addPose(parent, child, localOff){
+    const s=new PoseSpring(parent,child,localOff,KP,DP);
+    springs.push(s); JS.push(s); return s;
   }
 
-  const rag={id,limbs,JS};
+  // local offsets FROM parent centre TO child centre (model space, Y-up)
+  addDist(lFoot,  lShin);
+  addDist(rFoot,  rShin);
+  addDist(lShin,  lThigh);
+  addDist(rShin,  rThigh);
+  addDist(lThigh, pelvis);
+  addDist(rThigh, pelvis);
+  addDist(pelvis, belly);
+  addDist(belly,  chest);
+  addDist(chest,  neck);
+  addDist(neck,   head);
+  addDist(chest,  lUA);
+  addDist(chest,  rUA);
+  addDist(lUA,    lFA);
+  addDist(rUA,    rFA);
+
+  // Pose springs — keep limbs in anatomically correct sockets
+  // offsets are in local-space of the parent body
+  addPose(pelvis, lThigh, new THREE.Vector3(-X_HIP,  -(Y_HIP-Y_THIGH)/2, 0));
+  addPose(pelvis, rThigh, new THREE.Vector3( X_HIP,  -(Y_HIP-Y_THIGH)/2, 0));
+  addPose(pelvis, belly,  new THREE.Vector3(0,  (Y_BELLY-Y_HIP)/2, 0));
+  addPose(belly,  chest,  new THREE.Vector3(0,  (Y_CHEST-Y_BELLY)/2, 0));
+  addPose(chest,  neck,   new THREE.Vector3(0,  (Y_NECK-Y_CHEST)/2, 0));
+  addPose(neck,   head,   new THREE.Vector3(0,  (Y_HEAD-Y_NECK)/2,  0));
+  addPose(chest,  lUA,    new THREE.Vector3(-(X_SHOULDER+.06*S), .10*S, 0));
+  addPose(chest,  rUA,    new THREE.Vector3( (X_SHOULDER+.06*S), .10*S, 0));
+  addPose(lUA,    lFA,    new THREE.Vector3(-(X_HAND-X_ELBOW+.04*S), 0, 0));
+  addPose(rUA,    rFA,    new THREE.Vector3( (X_HAND-X_ELBOW+.04*S), 0, 0));
+  addPose(lThigh, lShin,  new THREE.Vector3(0, -(Y_THIGH-Y_SHIN)/2-.10*S, 0));
+  addPose(rThigh, rShin,  new THREE.Vector3(0, -(Y_THIGH-Y_SHIN)/2-.10*S, 0));
+  addPose(lShin,  lFoot,  new THREE.Vector3(0, -(Y_SHIN-Y_FOOT)/2-.16*S, .06*S));
+  addPose(rShin,  rFoot,  new THREE.Vector3(0, -(Y_SHIN-Y_FOOT)/2-.16*S, .06*S));
+
+  // Long-range stability braces (prevent full collapse without fighting pose)
+  addDist(lThigh, rThigh);
+  addDist(pelvis, chest);
+  addDist(lUA, rUA);
+
+  if(falling){
+    const v=new THREE.Vector3((Math.random()-.5)*5, 4+Math.random()*5, (Math.random()-.5)*5);
+    limbs.forEach(lb=>{ lb.vel.copy(v); lb.angVel.set((Math.random()-.5)*5,(Math.random()-.5)*5,(Math.random()-.5)*5); });
+  }
+
+  const rag={id, limbs, JS};
   ragdolls.push(rag);
   updateStats();
   return rag;
@@ -861,8 +967,8 @@ mks('sl-gravity','val-gravity',v=>{ gravity=v; document.getElementById('stat-g')
 mks('sl-bounce','val-bounce',v=>bounce=v,v=>v.toFixed(2));
 mks('sl-friction','val-friction',v=>friction=v,v=>v.toFixed(2));
 mks('sl-drag','val-drag',v=>airDrag=v,v=>v.toFixed(3));
-mks('sl-stiff','val-stiff',v=>{ jointK=v; ragdolls.forEach(r=>r.JS.forEach(s=>s.k=v)); },v=>Math.round(v));
-mks('sl-damp','val-damp',v=>{ jointD=v; ragdolls.forEach(r=>r.JS.forEach(s=>s.d=v)); },v=>Math.round(v));
+mks('sl-stiff','val-stiff',v=>{ jointK=v; ragdolls.forEach(r=>r.JS.forEach(s=>{ s.k=s instanceof PoseSpring ? v*1.4 : v; })); },v=>Math.round(v));
+mks('sl-damp','val-damp',v=>{ jointD=v; ragdolls.forEach(r=>r.JS.forEach(s=>{ s.d=s instanceof PoseSpring ? v*1.2 : v; })); },v=>Math.round(v));
 mks('sl-mass','val-mass',v=>limbMass=v,v=>v.toFixed(1));
 
 // Link settings
@@ -976,7 +1082,7 @@ function getCamFront(dist){
   return camPos.clone().addScaledVector(fwd,dist);
 }
 document.getElementById('btn-spawn-rag').addEventListener('click',()=>{
-  const p=getCamFront(7); p.y=FLOOR_Y+4;
+  const p=getCamFront(7); p.y=FLOOR_Y+0.05;
   spawnRagdoll(p);
   toast('👤 Grab any body part and drag!');
 });
@@ -987,17 +1093,17 @@ document.getElementById('btn-spawn-rag-fall').addEventListener('click',()=>{
 document.getElementById('btn-rm-rags').addEventListener('click',()=>{ removeAllRagdolls(); updateStats(); toast('Ragdolls removed'); });
 
 document.getElementById('btn-floppy').addEventListener('click',()=>{
-  ragdolls.forEach(r=>r.JS.forEach(s=>{ s.k=25; s.d=3; }));
-  jointK=25; jointD=3;
-  document.getElementById('sl-stiff').value=25; document.getElementById('val-stiff').textContent='25';
+  ragdolls.forEach(r=>r.JS.forEach(s=>{ s.k=20; s.d=3; }));
+  jointK=20; jointD=3;
+  document.getElementById('sl-stiff').value=20; document.getElementById('val-stiff').textContent='20';
   document.getElementById('sl-damp').value=3;   document.getElementById('val-damp').textContent='3';
   toast('😵 Floppy mode!');
 });
 document.getElementById('btn-tpose').addEventListener('click',()=>{
-  ragdolls.forEach(r=>r.JS.forEach(s=>{ s.k=500; s.d=30; }));
-  jointK=500; jointD=30;
+  ragdolls.forEach(r=>r.JS.forEach(s=>{ s.k=500; s.d=35; }));
+  jointK=500; jointD=35;
   document.getElementById('sl-stiff').value=500; document.getElementById('val-stiff').textContent='500';
-  document.getElementById('sl-damp').value=30;   document.getElementById('val-damp').textContent='30';
+  document.getElementById('sl-damp').value=35;   document.getElementById('val-damp').textContent='35';
   toast('🧍 Stiff mode!');
 });
 document.getElementById('btn-explode-rag').addEventListener('click',()=>{
@@ -1079,7 +1185,7 @@ setTimeout(()=>{
       sh, COLORS[i], 1
     );
   });
-  spawnRagdoll(new THREE.Vector3(0, FLOOR_Y+4, -2));
+  spawnRagdoll(new THREE.Vector3(0, FLOOR_Y + 0.05, -2));
   toast('👤 H=Human  4=Link  5=Cut  P=Pin  1-3=Tools  WASD+RMB=Camera');
 }, 400);
 </script>
