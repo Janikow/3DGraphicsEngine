@@ -1,0 +1,6 @@
+{
+  "version": "v0.3.2",
+  "name": "Link Rework",
+  "date": "2026-03-21",
+  "notes": "Convex hull collision, 6-DOF weld constraints, STL import, gravity direction control"
+}
