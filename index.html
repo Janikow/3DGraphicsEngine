@@ -198,10 +198,57 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
   border-radius:2px;margin-bottom:6px;overflow:hidden;display:none;position:relative;}
 #stl-preview-canvas{width:100%;height:100%;}
 .stl-no-items{font-size:9px;color:var(--dim);text-align:center;padding:12px;font-style:italic;}
+
+/* ── LABELS SYSTEM ── */
+#label-canvas-overlay{position:fixed;inset:0;pointer-events:none;z-index:5;}
+.body-label{
+  position:absolute;pointer-events:none;transform:translate(-50%,-100%);
+  white-space:nowrap;font-family:'Share Tech Mono',monospace;
+  transition:opacity .15s;
+}
+.body-label .lbl-inner{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 7px 2px 6px;border-radius:2px;
+  font-size:11px;line-height:1.4;
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(3px);
+}
+.body-label .lbl-line{
+  position:absolute;left:50%;top:100%;
+  width:1px;transform-origin:top center;
+  background:rgba(255,255,255,.25);
+}
+/* name list in panel */
+.name-list{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto;margin-top:4px;}
+.name-list::-webkit-scrollbar{width:3px;}
+.name-list::-webkit-scrollbar-thumb{background:var(--border2);}
+.name-item{display:flex;align-items:center;gap:5px;padding:4px 7px;
+  background:var(--panel2);border:1px solid var(--border);border-radius:2px;
+  font-size:9px;cursor:pointer;transition:all .12s;user-select:none;}
+.name-item:hover{border-color:var(--active);color:var(--active);}
+.name-item.assigned{border-color:var(--green);color:var(--green);}
+.name-item.selected{border-color:var(--accent3);color:var(--accent3);background:rgba(255,204,68,.08);}
+.name-item .ni-idx{color:var(--dim);font-size:8px;width:14px;flex-shrink:0;}
+.name-item .ni-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.name-item .ni-body{font-size:7px;color:var(--dim);flex-shrink:0;}
+.name-item .ni-del{font-size:9px;color:var(--dim);cursor:pointer;padding:1px 3px;border-radius:2px;flex-shrink:0;}
+.name-item .ni-del:hover{color:var(--red);}
+.lbl-drop-zone{border:2px dashed var(--border2);border-radius:3px;padding:14px 10px;
+  text-align:center;cursor:pointer;transition:all .2s;background:var(--panel2);margin-bottom:6px;}
+.lbl-drop-zone:hover,.lbl-drop-zone.dragover{border-color:var(--active);background:var(--active-bg);}
+.lbl-drop-zone .dz-icon{font-size:18px;display:block;margin-bottom:4px;}
+.lbl-drop-zone .dz-text{font-size:9px;color:var(--dim2);line-height:1.5;}
+#lbl-file-input{display:none;}
+.lbl-swatch-row{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+.lbl-swatch{width:16px;height:16px;border-radius:2px;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s;}
+.lbl-swatch:hover{transform:scale(1.25);}
+.lbl-swatch.active{border-color:#fff;}
+#lbl-assign-mode-btn.active{border-color:var(--accent3);color:var(--accent3);background:rgba(255,204,68,.1);}
 </style>
 </head>
 <body>
 <canvas id="three"></canvas>
+<div id="label-canvas-overlay"></div>
 <div id="toast"></div>
 <div id="drag-ghost" id="drag-ghost">●</div>
 <div id="drop-overlay"></div>
@@ -211,7 +258,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
     <div id="logo">
       <div>
         <h1 class="logo">GRAVITAS</h1>
-        <div class="sub">Physics Sandbox</div>
+        <div class="sub">Physics Sandbox &nbsp;<span id="version-badge" style="color:var(--active);letter-spacing:.1em;"></span></div>
       </div>
     </div>
     <div id="tabs">
@@ -221,6 +268,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
       <button class="tab-btn" data-tab="human">Human</button>
       <button class="tab-btn" data-tab="connect">Connect</button>
       <button class="tab-btn" data-tab="import">📦 Import</button>
+      <button class="tab-btn" data-tab="labels">🏷️ Labels</button>
     </div>
     <div id="tool-bar">
       <button class="tool-btn active" id="btn-grab-tool">✋ Grab</button>
@@ -623,6 +671,95 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
           <button class="abtn" id="btn-stl-rain">☂ STL Rain</button>
           <button class="abtn d" id="btn-stl-clear-lib">✕ Clear Library</button>
         </div>
+      </div>
+
+      <!-- ═══ LABELS ═══ -->
+      <div class="tab-content" id="tab-labels">
+
+        <div class="psec">
+          <div class="slabel">Load Names</div>
+          <input type="file" id="lbl-file-input" accept=".txt,.json">
+          <div class="lbl-drop-zone" id="lbl-drop-zone">
+            <span class="dz-icon">🏷️</span>
+            <div class="dz-text">Drop .txt or .json here<br>or click to browse</div>
+          </div>
+          <div style="font-size:8px;color:var(--dim);line-height:1.6;margin-bottom:6px;">
+            <b style="color:var(--dim2)">.txt</b> — one name per line<br>
+            <b style="color:var(--dim2)">.json</b> — array of strings or objects<br>
+            <code style="color:var(--accent3);font-size:7px;">["Alice","Bob"]</code> or<br>
+            <code style="color:var(--accent3);font-size:7px;">[{"name":"Alice","color":"#f55"}]</code>
+          </div>
+          <button class="abtn" id="btn-lbl-paste">📋 Paste / Type Names</button>
+          <textarea id="lbl-paste-area" placeholder="One name per line..." style="display:none;width:100%;height:80px;background:var(--panel2);border:1px solid var(--border2);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:9px;padding:5px;border-radius:2px;resize:vertical;margin-top:4px;outline:none;"></textarea>
+          <button class="abtn" id="btn-lbl-paste-confirm" style="display:none;">✓ Import Text</button>
+        </div>
+
+        <div class="psec">
+          <div class="slabel">Assign Mode</div>
+          <button class="abtn" id="lbl-assign-mode-btn">🏷️ Click-to-Assign: OFF</button>
+          <p style="font-size:8px;color:var(--dim);line-height:1.5;margin-bottom:4px;">
+            When ON, clicking a body assigns the selected name from the list below.
+          </p>
+          <div class="srow">
+            <label>Auto-advance <span id="val-lbl-advance" style="color:var(--accent3)">ON</span></label>
+          </div>
+          <div class="cbox-row">
+            <input type="checkbox" id="chk-lbl-advance" checked>
+            <label for="chk-lbl-advance">Advance to next name after assign</label>
+          </div>
+        </div>
+
+        <div class="psec">
+          <div class="slabel">Label Style</div>
+          <div class="srow">
+            <label>Font Size <span id="val-lbl-size">11</span>px</label>
+            <input type="range" id="sl-lbl-size" min="7" max="24" step="1" value="11">
+          </div>
+          <div class="srow">
+            <label>Line Height <span id="val-lbl-line">18</span>px</label>
+            <input type="range" id="sl-lbl-line" min="4" max="40" step="1" value="18">
+          </div>
+          <div class="srow">
+            <label>Opacity <span id="val-lbl-opacity">1.0</span></label>
+            <input type="range" id="sl-lbl-opacity" min="0.1" max="1" step="0.05" value="1">
+          </div>
+          <div class="srow">
+            <label>Y Offset <span id="val-lbl-yoff">0.6</span></label>
+            <input type="range" id="sl-lbl-yoff" min="0" max="4" step="0.1" value="0.6">
+          </div>
+          <div class="cbox-row">
+            <input type="checkbox" id="chk-lbl-bg" checked>
+            <label for="chk-lbl-bg">Background pill</label>
+          </div>
+          <div class="cbox-row">
+            <input type="checkbox" id="chk-lbl-line">
+            <label for="chk-lbl-line">Connector line</label>
+          </div>
+          <div class="cbox-row">
+            <input type="checkbox" id="chk-lbl-face">
+            <label for="chk-lbl-face">Always face camera</label>
+          </div>
+          <div class="slabel" style="margin-top:6px;">Label Color</div>
+          <div class="lbl-swatch-row" id="lbl-color-row"></div>
+          <div class="slabel" style="margin-top:6px;">Background</div>
+          <div class="lbl-swatch-row" id="lbl-bg-row"></div>
+        </div>
+
+        <div class="psec">
+          <div class="slabel">Name List <span id="lbl-count" style="color:var(--dim)">(0)</span></div>
+          <div class="name-list" id="name-list">
+            <div class="stl-no-items">No names loaded</div>
+          </div>
+        </div>
+
+        <div class="psec">
+          <div class="slabel">Actions</div>
+          <button class="abtn" id="btn-lbl-assign-all">⚡ Auto-assign All Bodies</button>
+          <button class="abtn" id="btn-lbl-unassign-all">↩ Clear All Assignments</button>
+          <button class="abtn" id="btn-lbl-export">💾 Export Assignments JSON</button>
+          <button class="abtn d" id="btn-lbl-clear">✕ Clear Name List</button>
+        </div>
+
       </div>
 
     </div><!-- /side -->
@@ -2329,6 +2466,11 @@ function clearAll(){
   for(let i=userLinks.length-1;i>=0;i--) removeUserLink(i);
   [...ragdolls].forEach(r=>removeRagdoll(r));
   for(let i=bodies.length-1;i>=0;i--) removeBodyAt(i);
+  // Clear all label DOM elements
+  for(const [,entry] of labelElements) entry.el.remove();
+  labelElements.clear();
+  nameList.forEach(n=>n.assigned=null);
+  refreshNameList();
   updateStats(); updateLinkStatus(); toast('Scene cleared');
 }
 
@@ -2452,6 +2594,7 @@ function animate(now){
   if(grabBody) grabBody.vel.set(0,0,0);
   ragdolls.forEach(r=>updateRagdollVisuals(r));
   updateLinkVisuals();
+  updateLabels();
   rimL.intensity=.2+.06*Math.sin(now*.0005);
   upFPS(now);
   renderer.render(scene,camera);
@@ -2826,6 +2969,451 @@ document.addEventListener('mouseup', e => {
   }
   // dragShape cleared by the existing mouseup handler
 }, true); // capture so it fires before the existing handler resets dragShape
+
+// ════════════════════════════════════════════════════════
+//  LABEL SYSTEM
+//  - Names loaded from .txt / .json
+//  - Each PhysBody can have a label (div overlay projected to screen)
+//  - Assign mode: clicking a body assigns the selected name
+// ════════════════════════════════════════════════════════
+
+const labelOverlay = document.getElementById('label-canvas-overlay');
+
+let nameList      = [];   // [{name, color, assigned: bodyRef|null}]
+let selectedNameIdx = -1;
+let assignModeOn  = false;
+let lblAutoAdvance= true;
+let lblFontSize   = 11;
+let lblLineHeight = 18;
+let lblOpacity    = 1.0;
+let lblYOffset    = 0.6;
+let lblShowBg     = true;
+let lblShowLine   = false;
+let lblFaceCamera = true;
+let lblTextColor  = '#ffffff';
+let lblBgColor    = 'rgba(0,0,0,0.55)';
+
+// DOM label elements, keyed by body reference
+const labelElements = new Map(); // body -> {el, lineEl}
+
+// ── Parse file content into [{name, color?}] ──────────────
+function parseNameFile(content, filename){
+  const ext = filename.split('.').pop().toLowerCase();
+  try {
+    if(ext === 'json'){
+      const data = JSON.parse(content);
+      if(!Array.isArray(data)) throw new Error('Expected JSON array');
+      return data.map(item=>{
+        if(typeof item === 'string') return {name:item, color:null};
+        if(item && typeof item.name === 'string') return {name:item.name, color:item.color||null};
+        return null;
+      }).filter(Boolean);
+    } else {
+      // .txt — one name per line, ignore blanks and #comments
+      return content.split('\n')
+        .map(l=>l.trim())
+        .filter(l=>l && !l.startsWith('#'))
+        .map(name=>({name, color:null}));
+    }
+  } catch(e){
+    toast('⚠ Parse error: '+e.message);
+    return [];
+  }
+}
+
+function loadNames(parsed){
+  // Keep existing assigned state if name matches
+  const existingMap = new Map(nameList.map(n=>[n.name, n]));
+  nameList = parsed.map(p=>({
+    name: p.name,
+    color: p.color || null,
+    assigned: existingMap.get(p.name)?.assigned || null
+  }));
+  if(selectedNameIdx >= nameList.length) selectedNameIdx = nameList.length > 0 ? 0 : -1;
+  refreshNameList();
+  toast(`🏷️ Loaded ${nameList.length} names`);
+}
+
+// ── Name list UI ──────────────────────────────────────────
+function refreshNameList(){
+  const el = document.getElementById('name-list');
+  const cnt = document.getElementById('lbl-count');
+  cnt.textContent = `(${nameList.length})`;
+  if(nameList.length === 0){
+    el.innerHTML = '<div class="stl-no-items">No names loaded</div>';
+    return;
+  }
+  el.innerHTML = '';
+  nameList.forEach((item, i)=>{
+    const div = document.createElement('div');
+    const isSel = i === selectedNameIdx;
+    const isAssigned = !!item.assigned;
+    div.className = 'name-item' + (isAssigned?' assigned':'') + (isSel?' selected':'');
+    div.innerHTML = `
+      <span class="ni-idx">${i+1}</span>
+      <span class="ni-name" title="${item.name}">${item.name}</span>
+      <span class="ni-body">${item.assigned ? '●' : ''}</span>
+      <span class="ni-del" data-i="${i}" title="Remove">✕</span>
+    `;
+    if(item.color) div.style.borderLeftColor = item.color;
+
+    div.addEventListener('click', e=>{
+      if(e.target.dataset.i !== undefined) return;
+      selectedNameIdx = i;
+      refreshNameList();
+    });
+    div.querySelector('.ni-del').addEventListener('click', e=>{
+      e.stopPropagation();
+      const idx = parseInt(e.target.dataset.i);
+      // Remove label from assigned body
+      if(nameList[idx].assigned){
+        removeBodyLabel(nameList[idx].assigned);
+        nameList[idx].assigned = null;
+      }
+      nameList.splice(idx, 1);
+      if(selectedNameIdx >= nameList.length) selectedNameIdx = nameList.length-1;
+      refreshNameList();
+    });
+    el.appendChild(div);
+  });
+
+  // Scroll selected into view
+  const selEl = el.children[selectedNameIdx];
+  if(selEl) selEl.scrollIntoView({block:'nearest'});
+}
+
+// ── DOM Label creation / removal ──────────────────────────
+function createBodyLabel(body, name, color){
+  // Remove existing label if any
+  removeBodyLabel(body);
+
+  const el = document.createElement('div');
+  el.className = 'body-label';
+
+  const inner = document.createElement('div');
+  inner.className = 'lbl-inner';
+  inner.textContent = name;
+  applyLabelStyle(inner, color);
+  el.appendChild(inner);
+
+  const lineEl = document.createElement('div');
+  lineEl.className = 'lbl-line';
+  el.appendChild(lineEl);
+
+  labelOverlay.appendChild(el);
+  labelElements.set(body, {el, inner, lineEl, name, color});
+  body._labelName = name;
+}
+
+function removeBodyLabel(body){
+  const entry = labelElements.get(body);
+  if(entry){ entry.el.remove(); labelElements.delete(body); }
+  delete body._labelName;
+}
+
+function applyLabelStyle(inner, overrideColor){
+  inner.style.fontSize = lblFontSize + 'px';
+  inner.style.color = overrideColor || lblTextColor;
+  inner.style.background = lblShowBg ? lblBgColor : 'transparent';
+  inner.style.border = lblShowBg ? '1px solid rgba(255,255,255,.18)' : 'none';
+}
+
+function refreshAllLabelStyles(){
+  for(const [body, entry] of labelElements){
+    applyLabelStyle(entry.inner, entry.color);
+  }
+}
+
+// ── Project 3D position to screen ────────────────────────
+const _labelVec = new THREE.Vector3();
+const _labelVec2 = new THREE.Vector3();
+
+function updateLabelPositions(){
+  for(const [body, entry] of labelElements){
+    const {el, inner, lineEl} = entry;
+
+    // World position above body
+    _labelVec.copy(body.pos);
+    _labelVec.y += body.radius + lblYOffset;
+
+    // Frustum cull — if behind camera, hide
+    _labelVec2.copy(_labelVec).project(camera);
+    if(_labelVec2.z > 1){ el.style.opacity='0'; continue; }
+
+    const sx = ( _labelVec2.x * 0.5 + 0.5) * innerWidth;
+    const sy = (-_labelVec2.y * 0.5 + 0.5) * innerHeight;
+
+    el.style.left = sx + 'px';
+    el.style.top  = sy + 'px';
+    el.style.opacity = lblOpacity.toString();
+    inner.style.fontSize = lblFontSize + 'px';
+
+    // Connector line — from label bottom to body center projected
+    if(lblShowLine){
+      _labelVec2.copy(body.pos).project(camera);
+      const bx = ( _labelVec2.x * 0.5 + 0.5) * innerWidth;
+      const by = (-_labelVec2.y * 0.5 + 0.5) * innerHeight;
+      const dx = bx - sx, dy = by - sy;
+      const len = Math.sqrt(dx*dx+dy*dy);
+      const angle = Math.atan2(dy,dx) * 180/Math.PI - 90;
+      lineEl.style.display='block';
+      lineEl.style.height = len + 'px';
+      lineEl.style.transform = `rotate(${angle}deg)`;
+    } else {
+      lineEl.style.display='none';
+    }
+  }
+}
+
+// ── Assign mode ───────────────────────────────────────────
+function toggleAssignMode(){
+  assignModeOn = !assignModeOn;
+  const btn = document.getElementById('lbl-assign-mode-btn');
+  btn.textContent = `🏷️ Click-to-Assign: ${assignModeOn?'ON':'OFF'}`;
+  btn.classList.toggle('active', assignModeOn);
+  toast(assignModeOn ? '🏷️ Click a body to assign name' : 'Assign mode off');
+}
+
+function assignNameToBody(body){
+  if(selectedNameIdx < 0 || selectedNameIdx >= nameList.length){
+    toast('⚠ No name selected in list'); return;
+  }
+  const item = nameList[selectedNameIdx];
+
+  // Unassign old body if this name was already assigned
+  if(item.assigned && item.assigned !== body){
+    removeBodyLabel(item.assigned);
+  }
+  // Unassign old name from this body if it had one
+  for(const n of nameList){
+    if(n.assigned === body && n !== item){
+      n.assigned = null;
+    }
+  }
+
+  item.assigned = body;
+  createBodyLabel(body, item.name, item.color);
+
+  if(lblAutoAdvance){
+    // Advance to next unassigned name, or wrap
+    let next = -1;
+    for(let i=selectedNameIdx+1; i<nameList.length; i++){
+      if(!nameList[i].assigned){ next=i; break; }
+    }
+    if(next < 0){
+      for(let i=0; i<selectedNameIdx; i++){
+        if(!nameList[i].assigned){ next=i; break; }
+      }
+    }
+    if(next >= 0) selectedNameIdx = next;
+  }
+
+  refreshNameList();
+  toast(`🏷️ "${item.name}" assigned`);
+}
+
+// Hook into the existing mousedown to intercept assign-mode clicks
+// (Runs in capture phase so it fires before the grab/tool handler)
+canvas.addEventListener('mousedown', e=>{
+  if(!assignModeOn || e.button !== 0) return;
+  const b = hitBody(e);
+  if(b){ assignNameToBody(b); e.stopPropagation(); }
+}, true);
+
+// Remove label when body is removed — patch removeBodyAt
+const _origRemoveBodyAt = window.removeBodyAt; // won't exist yet, patched below
+
+// ── File loading ──────────────────────────────────────────
+const lblFileInput = document.getElementById('lbl-file-input');
+const lblDropZone  = document.getElementById('lbl-drop-zone');
+
+function readLabelFile(file){
+  if(!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(ext !== 'txt' && ext !== 'json'){ toast('⚠ Use .txt or .json'); return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const parsed = parseNameFile(e.target.result, file.name);
+    if(parsed.length) loadNames(parsed);
+    else toast('⚠ No valid names found');
+  };
+  reader.readAsText(file);
+}
+
+lblDropZone.addEventListener('click', ()=>lblFileInput.click());
+lblFileInput.addEventListener('change', e=>readLabelFile(e.target.files[0]));
+lblDropZone.addEventListener('dragover', e=>{ e.preventDefault(); lblDropZone.classList.add('dragover'); });
+lblDropZone.addEventListener('dragleave', ()=>lblDropZone.classList.remove('dragover'));
+lblDropZone.addEventListener('drop', e=>{
+  e.preventDefault(); lblDropZone.classList.remove('dragover');
+  readLabelFile(e.dataTransfer.files[0]);
+});
+
+// ── Paste / type area ─────────────────────────────────────
+document.getElementById('btn-lbl-paste').addEventListener('click',()=>{
+  const area = document.getElementById('lbl-paste-area');
+  const confirmBtn = document.getElementById('btn-lbl-paste-confirm');
+  const shown = area.style.display !== 'none';
+  area.style.display = shown ? 'none' : 'block';
+  confirmBtn.style.display = shown ? 'none' : 'block';
+  if(!shown) area.focus();
+});
+document.getElementById('btn-lbl-paste-confirm').addEventListener('click',()=>{
+  const area = document.getElementById('lbl-paste-area');
+  const text = area.value.trim();
+  if(!text){ toast('⚠ Nothing to import'); return; }
+  const parsed = parseNameFile(text, 'paste.txt');
+  if(parsed.length){ loadNames(parsed); area.style.display='none'; document.getElementById('btn-lbl-paste-confirm').style.display='none'; area.value=''; }
+  else toast('⚠ No valid names found');
+});
+
+// ── Style controls ────────────────────────────────────────
+function mksL(id,vi,fn,fmt){
+  const sl=document.getElementById(id),vl=document.getElementById(vi);
+  if(!sl||!vl) return;
+  sl.addEventListener('input',()=>{ const v=parseFloat(sl.value); fn(v); vl.textContent=fmt?fmt(v):v; refreshAllLabelStyles(); });
+}
+mksL('sl-lbl-size','val-lbl-size',v=>lblFontSize=v,v=>Math.round(v));
+mksL('sl-lbl-line','val-lbl-line',v=>lblLineHeight=v,v=>Math.round(v));
+mksL('sl-lbl-opacity','val-lbl-opacity',v=>lblOpacity=v,v=>v.toFixed(2));
+mksL('sl-lbl-yoff','val-lbl-yoff',v=>lblYOffset=v,v=>v.toFixed(1));
+document.getElementById('chk-lbl-advance').addEventListener('change',function(){ lblAutoAdvance=this.checked; });
+document.getElementById('chk-lbl-bg').addEventListener('change',function(){ lblShowBg=this.checked; refreshAllLabelStyles(); });
+document.getElementById('chk-lbl-line').addEventListener('change',function(){ lblShowLine=this.checked; });
+document.getElementById('chk-lbl-face').addEventListener('change',function(){ lblFaceCamera=this.checked; });
+
+// Label text colors
+const LBL_COLORS=['#ffffff','#ffcc44','#55aaff','#ff5555','#44cc88','#ff8844','#aa55ff','#ff44aa','#ccff44','#aaaaaa'];
+const LBL_BKGS=[
+  'rgba(0,0,0,0.55)','rgba(30,50,80,0.75)','rgba(80,20,20,0.75)',
+  'rgba(10,40,20,0.75)','rgba(50,10,50,0.75)','rgba(255,255,255,0.15)',
+  'rgba(20,20,20,0.9)','transparent'
+];
+const lcrEl = document.getElementById('lbl-color-row');
+LBL_COLORS.forEach((hex,i)=>{
+  const d=document.createElement('div');
+  d.className='lbl-swatch'+(i===0?' active':'');
+  d.style.background=hex; d.style.border='2px solid transparent';
+  d.addEventListener('click',()=>{
+    document.querySelectorAll('#lbl-color-row .lbl-swatch').forEach(x=>x.classList.remove('active'));
+    d.classList.add('active'); lblTextColor=hex; refreshAllLabelStyles();
+  });
+  lcrEl.appendChild(d);
+});
+const lbgEl = document.getElementById('lbl-bg-row');
+LBL_BKGS.forEach((bg,i)=>{
+  const d=document.createElement('div');
+  d.className='lbl-swatch'+(i===0?' active':'');
+  d.style.background=bg; d.style.border='1px solid var(--border2)';
+  d.addEventListener('click',()=>{
+    document.querySelectorAll('#lbl-bg-row .lbl-swatch').forEach(x=>x.classList.remove('active'));
+    d.classList.add('active'); lblBgColor=bg; refreshAllLabelStyles();
+  });
+  lbgEl.appendChild(d);
+});
+
+// ── Action buttons ────────────────────────────────────────
+document.getElementById('lbl-assign-mode-btn').addEventListener('click', toggleAssignMode);
+
+document.getElementById('btn-lbl-assign-all').addEventListener('click',()=>{
+  const available = bodies.filter(b=>b.ragId<0&&!b._labelName);
+  let count=0;
+  for(let i=0; i<nameList.length && count<available.length; i++){
+    if(!nameList[i].assigned){
+      nameList[i].assigned = available[count];
+      createBodyLabel(available[count], nameList[i].name, nameList[i].color);
+      count++;
+    }
+  }
+  refreshNameList();
+  toast(`🏷️ Auto-assigned ${count} labels`);
+});
+
+document.getElementById('btn-lbl-unassign-all').addEventListener('click',()=>{
+  for(const [body] of labelElements) removeBodyLabel(body);
+  nameList.forEach(n=>n.assigned=null);
+  refreshNameList();
+  toast('Labels cleared from all bodies');
+});
+
+document.getElementById('btn-lbl-export').addEventListener('click',()=>{
+  const assignments = nameList
+    .filter(n=>n.assigned)
+    .map(n=>({
+      name: n.name,
+      position: {
+        x: +n.assigned.pos.x.toFixed(3),
+        y: +n.assigned.pos.y.toFixed(3),
+        z: +n.assigned.pos.z.toFixed(3)
+      },
+      color: n.color
+    }));
+  const json = JSON.stringify(assignments, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gravitas-labels.json';
+  a.click();
+  toast(`💾 Exported ${assignments.length} assignments`);
+});
+
+document.getElementById('btn-lbl-clear').addEventListener('click',()=>{
+  for(const [body] of labelElements) removeBodyLabel(body);
+  nameList.forEach(n=>n.assigned=null);
+  nameList=[]; selectedNameIdx=-1;
+  refreshNameList();
+  toast('Name list cleared');
+});
+
+// ── Hook removeBodyAt to clean up labels ──────────────────
+// Wrap the existing removeBodyAt function to also remove label
+const _realRemoveBodyAt = removeBodyAt;
+function removeBodyAt(idx){
+  const b = bodies[idx];
+  if(b){
+    // Clear assignment from nameList
+    for(const n of nameList){ if(n.assigned===b) n.assigned=null; }
+    removeBodyLabel(b);
+  }
+  _realRemoveBodyAt(idx);
+}
+
+// ── Label update in animate loop — called each frame ──────
+function updateLabels(){
+  if(labelElements.size === 0) return;
+  updateLabelPositions();
+}
+
+// ════════════════════════════════════════════════════════
+//  VERSION LOADER
+//  Reads version.json from the same directory as this HTML.
+//  To update the displayed version: edit version.json only.
+//  Falls back gracefully if the file is missing or fetch fails
+//  (e.g. when opened directly from disk without a local server).
+// ════════════════════════════════════════════════════════
+(async function loadVersion(){
+  const badge = document.getElementById('version-badge');
+  try {
+    // Attempt to load version.json sitting next to this HTML file
+    const res = await fetch('./version.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    // Display version + name in the badge
+    const label = [data.version, data.name].filter(Boolean).join(' · ');
+    badge.textContent = label;
+    badge.title = data.notes || '';
+
+    // Also update the page title
+    if(data.version) document.title = `GRAVITAS ${data.version} — Physics Sandbox`;
+
+    console.log(`[GRAVITAS] Version loaded from version.json:`, data);
+  } catch(e) {
+    // version.json not found or invalid — show nothing, run fine
+    badge.textContent = '';
+    console.info('[GRAVITAS] version.json not found or unreadable — running without version info.', e.message);
+  }
+})();
 
 // ── Seed ──
 setTimeout(()=>{
