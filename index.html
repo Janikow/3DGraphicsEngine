@@ -498,21 +498,39 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
             Use <b style="color:var(--red)">✂️ Cut</b> to sever links.
           </p>
           <div class="stat-inline">Active links: <b id="stat-links2">0</b></div>
-          <div style="font-size:9px;color:var(--active3);margin-top:4px;" id="link-status">No object selected</div>
+          <div style="font-size:9px;color:var(--accent3);margin-top:4px;" id="link-status">No object selected</div>
         </div>
         <div class="psec">
-          <div class="slabel">Spring Settings</div>
-          <div class="srow">
+          <div class="slabel">Link Mode</div>
+          <div class="igrid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:6px;">
+            <button class="ibtn sel" data-linkmode="weld"><span class="ic">🔩</span>Weld</button>
+            <button class="ibtn" data-linkmode="rod"><span class="ic">📏</span>Rod</button>
+            <button class="ibtn" data-linkmode="spring"><span class="ic">🌀</span>Spring</button>
+            <button class="ibtn" data-linkmode="rope"><span class="ic">🪢</span>Rope</button>
+            <button class="ibtn" data-linkmode="hinge"><span class="ic">🔄</span>Hinge</button>
+            <button class="ibtn" data-linkmode="ball"><span class="ic">⚽</span>Ball</button>
+          </div>
+          <div style="font-size:8px;color:var(--dim);line-height:1.5;" id="linkmode-desc">
+            Full 6-DOF rigid weld. Objects move and rotate as one. No stretch, no rotation.
+          </div>
+        </div>
+        <div class="psec">
+          <div class="slabel">Settings</div>
+          <div class="srow" id="row-link-rest">
             <label>Rest Length <span id="val-link-rest">Auto</span></label>
             <input type="range" id="sl-link-rest" min="0" max="12" step="0.1" value="0">
           </div>
-          <div class="srow">
+          <div class="srow" id="row-link-k">
             <label>Stiffness <span id="val-link-k">120</span></label>
             <input type="range" id="sl-link-k" min="5" max="1200" step="5" value="120">
           </div>
-          <div class="srow">
+          <div class="srow" id="row-link-d">
             <label>Damping <span id="val-link-d">8</span></label>
             <input type="range" id="sl-link-d" min="0" max="80" step="1" value="8">
+          </div>
+          <div class="srow">
+            <label>Weld Iters <span id="val-weld-iters">8</span></label>
+            <input type="range" id="sl-weld-iters" min="1" max="20" step="1" value="8">
           </div>
           <div class="srow">
             <label>Thickness <span id="val-link-thick">1.0</span></label>
@@ -520,22 +538,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
           </div>
         </div>
         <div class="psec">
-          <div class="slabel">Link Type</div>
-          <div class="cbox-row">
-            <input type="checkbox" id="chk-rope">
-            <label for="chk-rope">Rope (pull-only)</label>
-          </div>
-          <div class="cbox-row">
-            <input type="checkbox" id="chk-rigid-link">
-            <label for="chk-rigid-link">Rigid Rod</label>
-          </div>
+          <div class="slabel">Breakable</div>
           <div class="cbox-row">
             <input type="checkbox" id="chk-link-break">
-            <label for="chk-link-break">Breakable</label>
+            <label for="chk-link-break">Enable break on force</label>
           </div>
           <div class="srow">
             <label>Break Force <span id="val-break">50</span></label>
-            <input type="range" id="sl-break" min="5" max="200" step="5" value="50">
+            <input type="range" id="sl-break" min="5" max="500" step="5" value="50">
           </div>
         </div>
         <div class="psec">
@@ -546,6 +556,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
           <div class="slabel">Actions</div>
           <button class="abtn" id="btn-pin-toggle">📌 Pin Selected to Air</button>
           <button class="abtn" id="btn-chain">⛓️ Chain Selected</button>
+          <button class="abtn" id="btn-weld-all">🔩 Weld All to First</button>
           <button class="abtn d" id="btn-cut-all">✂️ Cut All Links</button>
         </div>
       </div>
@@ -1028,11 +1039,33 @@ function removeBodyAt(idx){
 }
 
 // ════════════════════════════════════════════════════════
-//  USER LINKS
+//  USER LINKS  — 6-DOF constraint system
+//
+//  Modes:
+//   weld   — locks all 6 DOF (position + orientation). True rigid weld.
+//   rod    — locks distance only (like ragdoll joint). Free rotation.
+//   spring — soft spring force. Stretchy.
+//   rope   — rod but pull-only (goes slack when compressed).
+//   hinge  — locks position + one rotation axis. Free to spin on one axis.
+//   ball   — locks position only (ball-and-socket). Free rotation.
 // ════════════════════════════════════════════════════════
 let linkA=null, linkColor='#ffcc44', linkK=120, linkD=8, linkRestOverride=0;
-let ropeMode=false, rigidLinkMode=false, breakableMode=false, breakForce=50;
+let linkMode='weld';   // 'weld'|'rod'|'spring'|'rope'|'hinge'|'ball'
+let breakableMode=false, breakForce=50;
 let linkThickness=1.0;
+let weldIters=8;
+
+// ropeMode / rigidLinkMode kept as aliases for old code paths
+let ropeMode=false, rigidLinkMode=false;
+
+const LINKMODE_DESC={
+  weld:   'Full 6-DOF rigid weld. Objects move and rotate as one. No stretch, no rotation.',
+  rod:    'Fixed distance, free rotation (ball-and-socket). Objects can spin freely around the joint.',
+  spring: 'Soft spring. Stretches under load. Tune stiffness and damping.',
+  rope:   'Like a rope — pulls when taut, goes slack when compressed. Free rotation.',
+  hinge:  'Fixed distance + locks 2 rotation axes. Objects pivot on one shared axis.',
+  ball:   'Ball-and-socket. Locks position, free rotation on all axes.',
+};
 
 function updateLinkStatus(){
   const cnt=userLinks.length;
@@ -1045,13 +1078,36 @@ function updateLinkStatus(){
 }
 
 function createUserLink(a,b){
-  const rest=linkRestOverride>0?linkRestOverride:a.pos.distanceTo(b.pos);
+  const dist=a.pos.distanceTo(b.pos);
+  const rest=linkRestOverride>0?linkRestOverride:dist;
+
+  // For weld: record the relative transform at link creation time
+  // anchorA = attachment point in A's local space
+  // anchorB = attachment point in B's local space
+  // relQuat  = desired relative orientation  qB_inv * qA  (A relative to B)
+  const anchorWorld=new THREE.Vector3().addVectors(a.pos,b.pos).multiplyScalar(0.5);
+  const anchorA=anchorWorld.clone().sub(a.pos).applyQuaternion(a.quatInv);
+  const anchorB=anchorWorld.clone().sub(b.pos).applyQuaternion(b.quatInv);
+  // relQuat stores the desired relative orientation of B wrt A: qA_inv * qB
+  const relQuat=new THREE.Quaternion().copy(a.quatInv).multiply(b.quat);
+
+  // Hinge axis stored in A's local space
+  const hingeAxisLocal=new THREE.Vector3(0,1,0); // default Y axis
+
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));
-  const mat=new THREE.LineBasicMaterial({color:new THREE.Color(linkColor),transparent:true,opacity:.85,linewidth:linkThickness});
+  const mat=new THREE.LineBasicMaterial({color:new THREE.Color(linkColor),transparent:true,opacity:.9,linewidth:linkThickness});
   const line=new THREE.Line(geo,mat); scene.add(line);
-  userLinks.push({a,b,rest,k:linkK,d:linkD,rope:ropeMode,rigid:rigidLinkMode,
-    breakable:breakableMode,breakForce,geo,mat,line,color:linkColor});
+
+  userLinks.push({
+    a, b, rest, mode:linkMode,
+    k:linkK, d:linkD,
+    breakable:breakableMode, breakForce,
+    anchorA, anchorB, relQuat, hingeAxisLocal,
+    geo, mat, line, color:linkColor,
+    // track stress for visual
+    stress:0
+  });
   updateLinkStatus();
 }
 
@@ -1066,17 +1122,180 @@ function cutLinksOnBody(b){
     if(userLinks[i].a===b||userLinks[i].b===b) removeUserLink(i);
 }
 
+// ── WELD CONSTRAINT SOLVERS ──────────────────────────────
+
+// Solve a positional constraint between a point on body A and a point on body B.
+// rA, rB: attachment offsets in LOCAL space.
+// targetSep: desired world-space separation (zero for weld, rest for rod).
+// Returns the positional error magnitude (for break detection).
+function solvePositionalConstraint(a, b, rAlocal, rBlocal, targetSep, compliance=0){
+  if(a.pinned&&b.pinned) return 0;
+
+  // World-space attachment points
+  const rAw=rAlocal.clone().applyQuaternion(a.quat);
+  const rBw=rBlocal.clone().applyQuaternion(b.quat);
+  const pA=a.pos.clone().add(rAw);
+  const pB=b.pos.clone().add(rBw);
+
+  const diff=new THREE.Vector3().subVectors(pB,pA);
+  const dist=diff.length();
+  if(dist<1e-7) return 0;
+
+  let err=0;
+  let n, corr;
+
+  if(targetSep===0){
+    // Drive attachment points to coincide
+    err=dist;
+    n=diff.clone().divideScalar(dist);
+    corr=dist;
+  } else {
+    err=dist-targetSep;
+    if(Math.abs(err)<1e-6) return 0;
+    n=diff.clone().divideScalar(dist);
+    corr=err;
+  }
+
+  // Effective mass (translational + angular)
+  const rAxN=rAw.clone().cross(n);
+  const rBxN=rBw.clone().cross(n);
+  const wA=a.invMass + a.invInertia*rAxN.lengthSq();
+  const wB=b.invMass + b.invInertia*rBxN.lengthSq();
+  const wSum=wA+wB+compliance;
+  if(wSum<1e-10) return err;
+
+  const lambda=corr/wSum;
+
+  // Position correction
+  if(!a.pinned&&!a.frozen){
+    a.pos.addScaledVector(n, lambda*a.invMass);
+    const dq=new THREE.Quaternion(
+      a.invInertia*lambda*rAxN.x,
+      a.invInertia*lambda*rAxN.y,
+      a.invInertia*lambda*rAxN.z, 0
+    );
+    a.quat.x+=0.5*dq.x; a.quat.y+=0.5*dq.y; a.quat.z+=0.5*dq.z;
+    a.quat.normalize(); a.quatInv.copy(a.quat).invert();
+    a.syncMeshQuat();
+  }
+  if(!b.pinned&&!b.frozen){
+    b.pos.addScaledVector(n,-lambda*b.invMass);
+    const dq=new THREE.Quaternion(
+      -b.invInertia*lambda*rBxN.x,
+      -b.invInertia*lambda*rBxN.y,
+      -b.invInertia*lambda*rBxN.z, 0
+    );
+    b.quat.x+=0.5*dq.x; b.quat.y+=0.5*dq.y; b.quat.z+=0.5*dq.z;
+    b.quat.normalize(); b.quatInv.copy(b.quat).invert();
+    b.syncMeshQuat();
+  }
+
+  return Math.abs(err);
+}
+
+// Solve angular (orientation) constraint.
+// Drives the relative quaternion between a and b toward relQuat (stored at link creation).
+// omega: correction axis*angle vector.
+function solveAngularConstraint(a, b, relQuat){
+  if(a.pinned&&b.pinned) return;
+
+  // Current relative quat: qA_inv * qB
+  const curRel=new THREE.Quaternion().copy(a.quatInv).multiply(b.quat);
+
+  // Error quat: how much we need to rotate to reach relQuat
+  // errQ = relQuat * curRel_inv
+  const errQ=new THREE.Quaternion().copy(relQuat).multiply(curRel.clone().invert());
+
+  // Convert to axis-angle (small angle: just use xyz components of errQ)
+  // For stability, ensure w >= 0
+  if(errQ.w<0){ errQ.x=-errQ.x; errQ.y=-errQ.y; errQ.z=-errQ.z; errQ.w=-errQ.w; }
+  // Correction axis in world space (rotate errQ axis by qA)
+  const axisLocal=new THREE.Vector3(errQ.x,errQ.y,errQ.z);
+  if(axisLocal.lengthSq()<1e-12) return;
+  const axisWorld=axisLocal.clone().applyQuaternion(a.quat);
+  const angle=2*Math.atan2(axisLocal.length(),errQ.w);
+  if(Math.abs(angle)<1e-6) return;
+
+  const wA=a.pinned?0:a.invInertia;
+  const wB=b.pinned?0:b.invInertia;
+  const wSum=wA+wB;
+  if(wSum<1e-10) return;
+
+  const lambda=angle/wSum;
+  const correction=axisWorld.clone().multiplyScalar(lambda);
+
+  if(!a.pinned&&!a.frozen){
+    const dqA=new THREE.Quaternion(
+       correction.x*wA*0.5,
+       correction.y*wA*0.5,
+       correction.z*wA*0.5, 0
+    );
+    a.quat.x+=dqA.x; a.quat.y+=dqA.y; a.quat.z+=dqA.z;
+    a.quat.normalize(); a.quatInv.copy(a.quat).invert();
+    a.syncMeshQuat();
+  }
+  if(!b.pinned&&!b.frozen){
+    const dqB=new THREE.Quaternion(
+      -correction.x*wB*0.5,
+      -correction.y*wB*0.5,
+      -correction.z*wB*0.5, 0
+    );
+    b.quat.x+=dqB.x; b.quat.y+=dqB.y; b.quat.z+=dqB.z;
+    b.quat.normalize(); b.quatInv.copy(b.quat).invert();
+    b.syncMeshQuat();
+  }
+}
+
+// Solve hinge: lock all rotation except around one axis
+function solveHingeConstraint(a, b, hingeAxisLocal){
+  // The hinge axis in world space from body A
+  const axisA=hingeAxisLocal.clone().applyQuaternion(a.quat);
+  // The same axis expressed in B's frame at creation = hingeAxisLocal rotated by relQuat
+  // We want axisA == axisB_world, so find the swing error
+  const axisB=hingeAxisLocal.clone().applyQuaternion(b.quat);
+  // Swing correction: drive axisB toward axisA
+  const cross=new THREE.Vector3().crossVectors(axisB,axisA);
+  if(cross.lengthSq()<1e-12) return;
+  const wA=a.pinned?0:a.invInertia;
+  const wB=b.pinned?0:b.invInertia;
+  const wSum=wA+wB; if(wSum<1e-10) return;
+  const angle=Math.asin(Math.min(1,cross.length()));
+  const correction=cross.normalize().multiplyScalar(angle/wSum);
+  if(!a.pinned&&!a.frozen){
+    const dq=new THREE.Quaternion(correction.x*wA*.5,correction.y*wA*.5,correction.z*wA*.5,0);
+    a.quat.x+=dq.x; a.quat.y+=dq.y; a.quat.z+=dq.z; a.quat.normalize(); a.quatInv.copy(a.quat).invert(); a.syncMeshQuat();
+  }
+  if(!b.pinned&&!b.frozen){
+    const dq=new THREE.Quaternion(-correction.x*wB*.5,-correction.y*wB*.5,-correction.z*wB*.5,0);
+    b.quat.x+=dq.x; b.quat.y+=dq.y; b.quat.z+=dq.z; b.quat.normalize(); b.quatInv.copy(b.quat).invert(); b.syncMeshQuat();
+  }
+}
+
+// Velocity-level damping for all constrained links
+function dampConstraintVelocity(a, b, rAlocal, rBlocal, damping){
+  if(damping<0.001) return;
+  const rAw=rAlocal.clone().applyQuaternion(a.quat);
+  const rBw=rBlocal.clone().applyQuaternion(b.quat);
+  const vA=a.vel.clone().add(new THREE.Vector3().crossVectors(a.angVel,rAw));
+  const vB=b.vel.clone().add(new THREE.Vector3().crossVectors(b.angVel,rBw));
+  const relV=new THREE.Vector3().subVectors(vA,vB);
+  const impulse=relV.clone().multiplyScalar(-damping/(a.invMass+b.invMass+0.001));
+  if(!a.pinned&&!a.frozen) a.vel.addScaledVector(impulse, a.invMass);
+  if(!b.pinned&&!b.frozen) b.vel.addScaledVector(impulse,-b.invMass);
+}
+
 function updateLinkVisuals(){
   userLinks.forEach(lk=>{
-    const pa=lk.a.pos,pb=lk.b.pos,arr=lk.geo.attributes.position.array;
+    const pa=lk.a.pos, pb=lk.b.pos;
+    const arr=lk.geo.attributes.position.array;
     arr[0]=pa.x;arr[1]=pa.y;arr[2]=pa.z;
     arr[3]=pb.x;arr[4]=pb.y;arr[5]=pb.z;
     lk.geo.attributes.position.needsUpdate=true;
-    const stretch=Math.max(0,pa.distanceTo(pb)-lk.rest)/Math.max(lk.rest,.01);
-    const t=Math.min(stretch,1);
-    const lkCol=new THREE.Color(lk.color||'#ffcc44');
-    lkCol.lerp(new THREE.Color('#ff3333'),t*.7);
-    lk.mat.color.copy(lkCol);
+    // Color by stress
+    const t=Math.min(lk.stress/2,1);
+    const base=new THREE.Color(lk.color||'#ffcc44');
+    base.lerp(new THREE.Color('#ff2222'),t);
+    lk.mat.color.copy(base);
   });
 }
 
@@ -1154,28 +1373,59 @@ function physicsStep(dt){
       }
     }
 
-    // user link springs
+    // ── USER LINK CONSTRAINTS ──
     for(let li=userLinks.length-1;li>=0;li--){
       const lk=userLinks[li];
-      const diff=new THREE.Vector3().subVectors(lk.b.pos,lk.a.pos);
-      const dist=diff.length(); if(dist<.0001) continue;
-      if(lk.rope && dist<=lk.rest) continue;
-      const stretch=dist-lk.rest;
+      const a=lk.a, b=lk.b;
 
-      // break check
-      if(lk.breakable && Math.abs(stretch)>lk.breakForce/lk.k){
-        removeUserLink(li); continue;
-      }
-
-      const dir=diff.divideScalar(dist);
-      if(lk.rigid){
-        // hard constraint for rigid rods
-        solveDistConstraint(lk.a,lk.b,lk.rest,.8);
-      } else {
-        const relV=new THREE.Vector3().subVectors(lk.b.vel,lk.a.vel).dot(dir);
+      if(lk.mode==='spring'){
+        // Soft spring — velocity-based force
+        const diff=new THREE.Vector3().subVectors(b.pos,a.pos);
+        const dist=diff.length(); if(dist<.0001) continue;
+        const stretch=dist-lk.rest;
+        const dir=diff.divideScalar(dist);
+        const relV=new THREE.Vector3().subVectors(b.vel,a.vel).dot(dir);
         const f=(lk.k*stretch+lk.d*relV)*sdt;
-        if(!lk.a.pinned&&!lk.a.frozen) lk.a.vel.addScaledVector(dir, f/lk.a.mass);
-        if(!lk.b.pinned&&!lk.b.frozen) lk.b.vel.addScaledVector(dir,-f/lk.b.mass);
+        if(!a.pinned&&!a.frozen) a.vel.addScaledVector(dir, f/a.mass);
+        if(!b.pinned&&!b.frozen) b.vel.addScaledVector(dir,-f/b.mass);
+        lk.stress=Math.abs(stretch);
+        if(lk.breakable && lk.stress>lk.breakForce/Math.max(lk.k,1)){ removeUserLink(li); continue; }
+
+      } else if(lk.mode==='rope'){
+        // Pull-only distance constraint
+        const diff=new THREE.Vector3().subVectors(b.pos,a.pos);
+        const dist=diff.length();
+        if(dist<=lk.rest){ lk.stress=0; continue; }
+        const err=solvePositionalConstraint(a,b,lk.anchorA,lk.anchorB,lk.rest);
+        lk.stress=err;
+        if(lk.breakable && err>lk.breakForce){ removeUserLink(li); continue; }
+
+      } else if(lk.mode==='rod' || lk.mode==='ball'){
+        // Fixed distance, free rotation — solve position only
+        const err=solvePositionalConstraint(a,b,lk.anchorA,lk.anchorB,lk.rest);
+        lk.stress=err;
+        dampConstraintVelocity(a,b,lk.anchorA,lk.anchorB,lk.d*0.01);
+        if(lk.breakable && err>lk.breakForce){ removeUserLink(li); continue; }
+
+      } else if(lk.mode==='hinge'){
+        // Fixed distance + locked rotation except one axis
+        const err=solvePositionalConstraint(a,b,lk.anchorA,lk.anchorB,lk.rest);
+        solveHingeConstraint(a,b,lk.hingeAxisLocal);
+        lk.stress=err;
+        dampConstraintVelocity(a,b,lk.anchorA,lk.anchorB,lk.d*0.01);
+        if(lk.breakable && err>lk.breakForce){ removeUserLink(li); continue; }
+
+      } else {
+        // WELD — full 6-DOF: position + orientation
+        // Run multiple iterations for rigidity (controlled by weldIters)
+        let err=0;
+        for(let wi=0;wi<weldIters;wi++){
+          err=solvePositionalConstraint(a,b,lk.anchorA,lk.anchorB,0);
+          solveAngularConstraint(a,b,lk.relQuat);
+        }
+        lk.stress=err;
+        dampConstraintVelocity(a,b,lk.anchorA,lk.anchorB,lk.d*0.02);
+        if(lk.breakable && err>lk.breakForce){ removeUserLink(li); continue; }
       }
     }
 
@@ -1944,14 +2194,13 @@ mks('sl-link-k','val-link-k',v=>linkK=v,v=>Math.round(v));
 mks('sl-link-d','val-link-d',v=>linkD=v,v=>Math.round(v));
 mks('sl-link-rest','val-link-rest',v=>{ linkRestOverride=v; document.getElementById('val-link-rest').textContent=v===0?'Auto':v.toFixed(1); },null);
 mks('sl-link-thick','val-link-thick',v=>linkThickness=v,v=>v.toFixed(1));
+mks('sl-weld-iters','val-weld-iters',v=>weldIters=Math.round(v),v=>Math.round(v));
 mks('sl-break','val-break',v=>breakForce=v,v=>Math.round(v));
 mks('sl-vortex','val-vortex',v=>vortexStrength=v,v=>Math.round(v));
 mks('sl-attr','val-attr',v=>attractorStrength=v,v=>Math.round(v));
 
 document.getElementById('chk-wire').addEventListener('change',function(){ wireframe=this.checked; });
 document.getElementById('chk-ghost').addEventListener('change',function(){ ghostMode=this.checked; });
-document.getElementById('chk-rope').addEventListener('change',function(){ ropeMode=this.checked; });
-document.getElementById('chk-rigid-link').addEventListener('change',function(){ rigidLinkMode=this.checked; });
 document.getElementById('chk-link-break').addEventListener('change',function(){ breakableMode=this.checked; });
 document.getElementById('chk-trails').addEventListener('change',function(){ trailsEnabled=this.checked; });
 document.getElementById('chk-sleeping').addEventListener('change',function(){ sleepEnabled=this.checked; });
@@ -1961,6 +2210,23 @@ document.getElementById('chk-attractor').addEventListener('change',function(){
   attraMesh.visible=attractorOn;
   if(attractorOn){ attractorPos.set(0,FLOOR_Y+4,0); attraMesh.position.copy(attractorPos); }
   toast(attractorOn?'🧲 Attractor ON':'Attractor OFF');
+});
+
+// Link mode buttons
+const LINKMODE_SHOW_SPRING=['row-link-k','row-link-d','row-link-rest'];
+document.querySelectorAll('.ibtn[data-linkmode]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.ibtn[data-linkmode]').forEach(x=>x.classList.remove('sel'));
+    btn.classList.add('sel');
+    linkMode=btn.dataset.linkmode;
+    ropeMode=(linkMode==='rope');
+    rigidLinkMode=(linkMode==='rod'||linkMode==='weld'||linkMode==='hinge'||linkMode==='ball');
+    // Show/hide spring-only controls
+    const isSpring=(linkMode==='spring'||linkMode==='rope');
+    document.getElementById('row-link-k').style.display=isSpring?'':'none';
+    document.getElementById('row-link-rest').style.display=(linkMode==='spring'||linkMode==='rope'||linkMode==='rod')?'':'none';
+    document.getElementById('linkmode-desc').textContent=LINKMODE_DESC[linkMode]||'';
+  });
 });
 
 // Gravity presets
@@ -2074,6 +2340,15 @@ document.getElementById('btn-pin-toggle').addEventListener('click',()=>{
 });
 document.getElementById('btn-cut-all').addEventListener('click',()=>{
   for(let i=userLinks.length-1;i>=0;i--) removeUserLink(i); toast('✂️ All links cut');
+});
+document.getElementById('btn-weld-all').addEventListener('click',()=>{
+  const nonRag=bodies.filter(b=>b.ragId<0);
+  if(nonRag.length<2){ toast('Need 2+ bodies'); return; }
+  const prev=linkMode; linkMode='weld';
+  const anchor=nonRag[0];
+  for(let i=1;i<nonRag.length;i++) createUserLink(anchor,nonRag[i]);
+  linkMode=prev;
+  toast(`🔩 Welded ${nonRag.length} bodies to first`);
 });
 document.getElementById('btn-chain').addEventListener('click',()=>{
   // chain all selected objects in order they were added
