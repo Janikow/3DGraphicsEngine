@@ -163,6 +163,41 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
 /* Stat row */
 .stat-inline{font-size:9px;color:var(--dim);margin-bottom:3px;}
 .stat-inline b{color:var(--accent3);}
+
+/* ── STL IMPORT ── */
+#stl-drop-zone{
+  border:2px dashed var(--border2);border-radius:3px;padding:18px 10px;
+  text-align:center;cursor:pointer;transition:all .2s;background:var(--panel2);
+  margin-bottom:6px;position:relative;
+}
+#stl-drop-zone:hover,#stl-drop-zone.dragover{
+  border-color:var(--active);background:var(--active-bg);
+}
+#stl-drop-zone .dz-icon{font-size:22px;display:block;margin-bottom:5px;}
+#stl-drop-zone .dz-text{font-size:9px;color:var(--dim2);line-height:1.5;}
+#stl-drop-zone .dz-sub{font-size:8px;color:var(--dim);margin-top:3px;}
+#stl-file-input{display:none;}
+.stl-library{display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto;margin-top:4px;}
+.stl-library::-webkit-scrollbar{width:3px;}
+.stl-library::-webkit-scrollbar-thumb{background:var(--border2);}
+.stl-item{display:flex;align-items:center;gap:6px;padding:5px 7px;
+  background:var(--panel2);border:1px solid var(--border);border-radius:2px;
+  cursor:grab;transition:all .12s;}
+.stl-item:hover{border-color:var(--active);background:var(--active-bg);}
+.stl-item.sel{border-color:var(--active);background:var(--active-bg);}
+.stl-item-icon{font-size:14px;flex-shrink:0;}
+.stl-item-info{flex:1;min-width:0;}
+.stl-item-name{font-size:9px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stl-item-meta{font-size:7px;color:var(--dim);margin-top:1px;}
+.stl-item-del{font-size:10px;color:var(--dim);cursor:pointer;padding:2px 4px;flex-shrink:0;border-radius:2px;}
+.stl-item-del:hover{color:var(--red);background:rgba(204,51,51,.15);}
+#stl-status{font-size:8px;color:var(--dim);text-align:center;padding:4px;min-height:18px;}
+#stl-progress{width:100%;height:2px;background:var(--border);border-radius:1px;margin-bottom:4px;display:none;}
+#stl-progress-bar{height:100%;width:0%;background:var(--active);border-radius:1px;transition:width .1s;}
+.stl-preview-wrap{width:100%;height:80px;background:var(--panel2);border:1px solid var(--border);
+  border-radius:2px;margin-bottom:6px;overflow:hidden;display:none;position:relative;}
+#stl-preview-canvas{width:100%;height:100%;}
+.stl-no-items{font-size:9px;color:var(--dim);text-align:center;padding:12px;font-style:italic;}
 </style>
 </head>
 <body>
@@ -185,6 +220,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
       <button class="tab-btn" data-tab="physics">Physics</button>
       <button class="tab-btn" data-tab="human">Human</button>
       <button class="tab-btn" data-tab="connect">Connect</button>
+      <button class="tab-btn" data-tab="import">📦 Import</button>
     </div>
     <div id="tool-bar">
       <button class="tool-btn active" id="btn-grab-tool">✋ Grab</button>
@@ -511,6 +547,70 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;heigh
           <button class="abtn" id="btn-pin-toggle">📌 Pin Selected to Air</button>
           <button class="abtn" id="btn-chain">⛓️ Chain Selected</button>
           <button class="abtn d" id="btn-cut-all">✂️ Cut All Links</button>
+        </div>
+      </div>
+
+      <!-- ═══ IMPORT ═══ -->
+      <div class="tab-content" id="tab-import">
+        <div class="psec">
+          <div class="slabel">Import STL</div>
+          <input type="file" id="stl-file-input" accept=".stl">
+          <div id="stl-drop-zone">
+            <span class="dz-icon">📦</span>
+            <div class="dz-text">Drop STL file here<br>or click to browse</div>
+            <div class="dz-sub">Binary &amp; ASCII supported</div>
+          </div>
+          <div id="stl-progress"><div id="stl-progress-bar"></div></div>
+          <div id="stl-status"></div>
+        </div>
+
+        <div class="psec">
+          <div class="slabel">Import Settings</div>
+          <div class="srow">
+            <label>Auto-Scale <span id="val-stl-scale">1.0</span></label>
+            <input type="range" id="sl-stl-scale" min="0.05" max="5" step="0.05" value="1">
+          </div>
+          <div class="srow">
+            <label>Spawn Mass <span id="val-stl-mass">1.0</span></label>
+            <input type="range" id="sl-stl-mass" min="0.1" max="20" step="0.1" value="1">
+          </div>
+          <div class="cbox-row">
+            <input type="checkbox" id="chk-stl-center" checked>
+            <label for="chk-stl-center">Auto-center geometry</label>
+          </div>
+          <div class="cbox-row">
+            <input type="checkbox" id="chk-stl-smooth">
+            <label for="chk-stl-smooth">Smooth normals</label>
+          </div>
+          <div class="cbox-row">
+            <input type="checkbox" id="chk-stl-wire">
+            <label for="chk-stl-wire">Wireframe overlay</label>
+          </div>
+        </div>
+
+        <div class="psec">
+          <div class="slabel">Collision Proxy</div>
+          <div style="font-size:8px;color:var(--dim);line-height:1.5;margin-bottom:6px;">
+            Physics uses a bounding-sphere proxy. Radius is auto-computed from mesh size.
+          </div>
+          <div class="srow">
+            <label>Proxy Scale <span id="val-stl-proxy">1.0</span></label>
+            <input type="range" id="sl-stl-proxy" min="0.2" max="2" step="0.05" value="1">
+          </div>
+        </div>
+
+        <div class="psec">
+          <div class="slabel">Library <span id="stl-count" style="color:var(--dim)">(0)</span></div>
+          <div class="stl-preview-wrap" id="stl-preview-wrap">
+            <canvas id="stl-preview-canvas"></canvas>
+          </div>
+          <div class="stl-library" id="stl-library">
+            <div class="stl-no-items">No STL files imported yet</div>
+          </div>
+          <br>
+          <button class="abtn" id="btn-stl-spawn">⬡ Spawn Selected</button>
+          <button class="abtn" id="btn-stl-rain">☂ STL Rain</button>
+          <button class="abtn d" id="btn-stl-clear-lib">✕ Clear Library</button>
         </div>
       </div>
 
@@ -1687,6 +1787,359 @@ window.addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 });
+
+
+// ════════════════════════════════════════════════════════
+//  STL IMPORTER — pure JS, no external loader needed
+// ════════════════════════════════════════════════════════
+
+let stlLibrary = [];       // [{name, geometry, triCount, byteSize, previewUrl}]
+let selectedStlIdx = -1;
+let stlScale = 1.0;
+let stlMass  = 1.0;
+let stlProxyScale = 1.0;
+let stlAutoCenter = true;
+let stlSmooth = false;
+let stlWireOver = false;
+let stlRainInterval = null;
+
+// ── Pure-JS STL Parser (handles both binary and ASCII) ──
+function parseSTL(buffer) {
+  // Detect ASCII vs binary
+  const uint8 = new Uint8Array(buffer);
+  // ASCII STLs start with "solid"
+  const header = String.fromCharCode(...uint8.slice(0, 80)).trimStart();
+  const isAscii = header.startsWith('solid') && containsAsciiSTL(uint8);
+
+  if (isAscii) return parseSTLAscii(buffer);
+  return parseSTLBinary(buffer);
+}
+
+function containsAsciiSTL(uint8) {
+  // Binary STLs: bytes 80-83 = triangle count. If the file size matches, it's binary.
+  const triCount = new DataView(uint8.buffer).getUint32(80, true);
+  const expectedSize = 84 + triCount * 50;
+  // If sizes match it's binary; otherwise ASCII
+  return uint8.length !== expectedSize;
+}
+
+function parseSTLBinary(buffer) {
+  const view = new DataView(buffer);
+  const triCount = view.getUint32(80, true);
+  const verts = new Float32Array(triCount * 9);
+  const norms = new Float32Array(triCount * 9);
+  let offset = 84;
+  for (let i = 0; i < triCount; i++) {
+    const nx = view.getFloat32(offset,    true);
+    const ny = view.getFloat32(offset+4,  true);
+    const nz = view.getFloat32(offset+8,  true);
+    offset += 12;
+    for (let v = 0; v < 3; v++) {
+      const base = i*9 + v*3;
+      verts[base]   = view.getFloat32(offset,   true);
+      verts[base+1] = view.getFloat32(offset+4, true);
+      verts[base+2] = view.getFloat32(offset+8, true);
+      norms[base]   = nx; norms[base+1] = ny; norms[base+2] = nz;
+      offset += 12;
+    }
+    offset += 2; // attribute byte count
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  geo.setAttribute('normal',   new THREE.BufferAttribute(norms, 3));
+  return { geo, triCount };
+}
+
+function parseSTLAscii(buffer) {
+  const text = new TextDecoder().decode(buffer);
+  const verts = [];
+  const vertRe = /vertex\s+([\d.eE+\-]+)\s+([\d.eE+\-]+)\s+([\d.eE+\-]+)/g;
+  let m;
+  while ((m = vertRe.exec(text)) !== null) {
+    verts.push(parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]));
+  }
+  const triCount = verts.length / 9;
+  const arr = new Float32Array(verts);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  geo.computeVertexNormals();
+  return { geo, triCount };
+}
+
+// Compute bounding sphere radius from geometry
+function computeBoundingRadius(geo) {
+  geo.computeBoundingSphere();
+  return geo.boundingSphere.radius;
+}
+
+// Center geometry at origin
+function centerGeometry(geo) {
+  geo.computeBoundingBox();
+  const center = new THREE.Vector3();
+  geo.boundingBox.getCenter(center);
+  geo.translate(-center.x, -center.y, -center.z);
+}
+
+// Normalize geometry to fit in a ~1-unit sphere
+function normalizeGeometry(geo) {
+  const r = computeBoundingRadius(geo);
+  if (r > 0) geo.scale(1/r, 1/r, 1/r);
+}
+
+// ── Mini preview renderer for STL library thumbnails ──
+const prevCanvas = document.getElementById('stl-preview-canvas');
+const prevRenderer = new THREE.WebGLRenderer({canvas: prevCanvas, antialias:true, alpha:true});
+prevRenderer.setSize(prevCanvas.offsetWidth || 188, 80);
+prevRenderer.setClearColor(0x000000, 0);
+const prevScene = new THREE.Scene();
+const prevCam   = new THREE.PerspectiveCamera(50, (prevCanvas.offsetWidth||188)/80, 0.01, 100);
+prevCam.position.set(0, 1.2, 2.5);
+prevCam.lookAt(0,0,0);
+prevScene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const prevSun = new THREE.DirectionalLight(0xffffff, 1.0);
+prevSun.position.set(2,4,3); prevScene.add(prevSun);
+let prevMesh = null;
+let prevAnimId = null;
+
+function renderPreview(geo) {
+  if(prevMesh){ prevScene.remove(prevMesh); prevMesh.geometry.dispose(); prevMesh.material.dispose(); }
+  const mat = new THREE.MeshStandardMaterial({color:0x4a9eff,roughness:.4,metalness:.4});
+  prevMesh = new THREE.Mesh(geo, mat);
+  prevScene.add(prevMesh);
+  document.getElementById('stl-preview-wrap').style.display='block';
+  if(prevAnimId) cancelAnimationFrame(prevAnimId);
+  let t=0;
+  function loop(){
+    prevAnimId=requestAnimationFrame(loop);
+    t+=0.012;
+    prevMesh.rotation.y=t;
+    prevMesh.rotation.x=Math.sin(t*.4)*.3;
+    prevRenderer.render(prevScene,prevCam);
+  }
+  loop();
+}
+
+// ── Library UI ──
+function refreshStlLibrary() {
+  const el = document.getElementById('stl-library');
+  const cnt = document.getElementById('stl-count');
+  cnt.textContent = `(${stlLibrary.length})`;
+  if (stlLibrary.length === 0) {
+    el.innerHTML = '<div class="stl-no-items">No STL files imported yet</div>';
+    return;
+  }
+  el.innerHTML = '';
+  stlLibrary.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'stl-item' + (i === selectedStlIdx ? ' sel' : '');
+    div.innerHTML = `
+      <span class="stl-item-icon">⬡</span>
+      <div class="stl-item-info">
+        <div class="stl-item-name" title="${item.name}">${item.name}</div>
+        <div class="stl-item-meta">${item.triCount.toLocaleString()} tris · ${formatBytes(item.byteSize)}</div>
+      </div>
+      <span class="stl-item-del" data-idx="${i}" title="Remove">✕</span>
+    `;
+    div.addEventListener('click', (e) => {
+      if(e.target.dataset.idx !== undefined) return;
+      selectedStlIdx = i;
+      refreshStlLibrary();
+      renderPreview(item.geometry.clone());
+      toast(`Selected: ${item.name}`);
+    });
+    // Drag to canvas
+    div.setAttribute('draggable', false); // we use mousedown approach
+    div.addEventListener('mousedown', e => {
+      if(e.target.dataset.idx !== undefined) return;
+      if(e.button !== 0) return;
+      selectedStlIdx = i;
+      dragShape = '__stl__';
+      dragGhost.textContent = '⬡';
+      dragGhost.style.opacity = '1';
+      dragGhost.style.left = e.clientX+'px';
+      dragGhost.style.top  = e.clientY+'px';
+      dropOverlay.classList.add('active');
+      e.preventDefault();
+    });
+    div.querySelector('.stl-item-del').addEventListener('click', e => {
+      const idx = parseInt(e.target.dataset.idx);
+      stlLibrary[idx].geometry.dispose();
+      stlLibrary.splice(idx, 1);
+      if(selectedStlIdx >= stlLibrary.length) selectedStlIdx = stlLibrary.length - 1;
+      refreshStlLibrary();
+      if(stlLibrary.length===0){ document.getElementById('stl-preview-wrap').style.display='none'; if(prevAnimId) cancelAnimationFrame(prevAnimId); }
+    });
+    el.appendChild(div);
+  });
+}
+
+function formatBytes(b) {
+  if(b < 1024) return b+'B';
+  if(b < 1048576) return (b/1024).toFixed(1)+'KB';
+  return (b/1048576).toFixed(1)+'MB';
+}
+
+function setStlStatus(msg, isErr=false) {
+  const el = document.getElementById('stl-status');
+  el.textContent = msg;
+  el.style.color = isErr ? 'var(--red)' : 'var(--dim)';
+}
+
+function processSTLFile(file) {
+  if (!file || !file.name.toLowerCase().endsWith('.stl')) {
+    setStlStatus('⚠ Only .stl files supported', true); return;
+  }
+  const prog = document.getElementById('stl-progress');
+  const progBar = document.getElementById('stl-progress-bar');
+  prog.style.display = 'block'; progBar.style.width = '0%';
+  setStlStatus('Reading file...');
+
+  const reader = new FileReader();
+  reader.onprogress = e => { if(e.lengthComputable) progBar.style.width=(e.loaded/e.total*60)+'%'; };
+  reader.onload = e => {
+    progBar.style.width = '70%';
+    setStlStatus('Parsing STL...');
+    try {
+      const { geo, triCount } = parseSTL(e.target.result);
+      progBar.style.width = '85%';
+
+      if (stlAutoCenter) centerGeometry(geo);
+      normalizeGeometry(geo); // normalize to unit sphere, scale applied at spawn
+      if (stlSmooth) geo.computeVertexNormals();
+
+      progBar.style.width = '100%';
+      const name = file.name.replace(/\.stl$/i,'');
+      stlLibrary.push({ name, geometry: geo, triCount, byteSize: e.target.result.byteLength });
+      selectedStlIdx = stlLibrary.length - 1;
+      refreshStlLibrary();
+      renderPreview(geo.clone());
+      setStlStatus(`✓ Loaded: ${triCount.toLocaleString()} triangles`);
+      toast(`📦 Imported: ${name}`);
+      setTimeout(()=>{ prog.style.display='none'; },800);
+    } catch(err) {
+      prog.style.display='none';
+      setStlStatus('⚠ Parse error: '+err.message, true);
+    }
+  };
+  reader.onerror = () => setStlStatus('⚠ File read error', true);
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Spawn an STL body ──
+function spawnStlBody(pos, vel, itemIdx) {
+  const item = stlLibrary[itemIdx < 0 ? selectedStlIdx : itemIdx];
+  if (!item) { toast('⚠ No STL selected'); return null; }
+  const sc = stlScale;
+  const geoClone = item.geometry.clone();
+  geoClone.scale(sc, sc, sc);
+  const col = new THREE.Color(selectedColor);
+  const mat = new THREE.MeshStandardMaterial({
+    color: col, emissive: col, emissiveIntensity: spawnEmit,
+    roughness: spawnRough, metalness: spawnMetal,
+    wireframe: false,
+    side: THREE.DoubleSide
+  });
+  const mesh = new THREE.Mesh(geoClone, mat);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.position.copy(pos);
+  mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
+  scene.add(mesh);
+
+  // Wireframe overlay
+  if (stlWireOver) {
+    const wireMat = new THREE.MeshBasicMaterial({color:0x444444,wireframe:true,transparent:true,opacity:.25});
+    const wireMesh = new THREE.Mesh(geoClone, wireMat);
+    mesh.add(wireMesh);
+  }
+
+  const rawRadius = computeBoundingRadius(geoClone);
+  const radius = Math.max(rawRadius, 0.05) * stlProxyScale;
+  const b = new PhysBody(mesh, radius, stlMass);
+  b.vel.copy(vel);
+  b.angVel.set((Math.random()-.5)*5,(Math.random()-.5)*5,(Math.random()-.5)*5);
+  b.isStl = true;
+  b.stlIdx = itemIdx < 0 ? selectedStlIdx : itemIdx;
+  if (trailsEnabled) b.trail = new Trail(selectedColor);
+  bodies.push(b); updateStats(); return b;
+}
+
+// ── UI wiring for import tab ──
+const stlDropZone = document.getElementById('stl-drop-zone');
+const stlFileInput = document.getElementById('stl-file-input');
+
+stlDropZone.addEventListener('click', () => stlFileInput.click());
+stlFileInput.addEventListener('change', e => { if(e.target.files[0]) processSTLFile(e.target.files[0]); });
+
+stlDropZone.addEventListener('dragover', e => { e.preventDefault(); stlDropZone.classList.add('dragover'); });
+stlDropZone.addEventListener('dragleave', () => stlDropZone.classList.remove('dragover'));
+stlDropZone.addEventListener('drop', e => {
+  e.preventDefault(); stlDropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processSTLFile(file);
+});
+
+// Also support dropping STL files directly onto the main canvas
+canvas.addEventListener('dragover', e => e.preventDefault());
+canvas.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.toLowerCase().endsWith('.stl')) {
+    processSTLFile(file);
+    toast('📦 STL file detected — importing...');
+  }
+});
+
+// Import tab sliders
+mks('sl-stl-scale', 'val-stl-scale', v => stlScale=v, v=>v.toFixed(2));
+mks('sl-stl-mass',  'val-stl-mass',  v => stlMass=v,  v=>v.toFixed(1));
+mks('sl-stl-proxy', 'val-stl-proxy', v => stlProxyScale=v, v=>v.toFixed(2));
+
+document.getElementById('chk-stl-center').addEventListener('change', function(){ stlAutoCenter=this.checked; });
+document.getElementById('chk-stl-smooth').addEventListener('change', function(){ stlSmooth=this.checked; });
+document.getElementById('chk-stl-wire').addEventListener('change',   function(){ stlWireOver=this.checked; });
+
+document.getElementById('btn-stl-spawn').addEventListener('click', () => {
+  if(selectedStlIdx < 0){ toast('⚠ No STL selected in library'); return; }
+  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  const pos=camPos.clone().addScaledVector(fwd,6); pos.y=Math.max(pos.y,FLOOR_Y+3);
+  spawnStlBody(pos, new THREE.Vector3((Math.random()-.5)*2,1,(Math.random()-.5)*2), -1);
+});
+
+document.getElementById('btn-stl-rain').addEventListener('click', function(){
+  if(stlLibrary.length===0){ toast('⚠ Import an STL first'); return; }
+  if(stlRainInterval){ clearInterval(stlRainInterval); stlRainInterval=null; this.textContent='☂ STL Rain'; return; }
+  this.textContent='■ Stop Rain';
+  stlRainInterval=setInterval(()=>{
+    if(bodies.length>180) return;
+    const idx=Math.floor(Math.random()*stlLibrary.length);
+    const pos=new THREE.Vector3((Math.random()-.5)*22,FLOOR_Y+24,(Math.random()-.5)*22);
+    spawnStlBody(pos, new THREE.Vector3((Math.random()-.5)*3,-2,(Math.random()-.5)*3), idx);
+  },200);
+});
+
+document.getElementById('btn-stl-clear-lib').addEventListener('click', ()=>{
+  if(stlRainInterval){ clearInterval(stlRainInterval); stlRainInterval=null; document.getElementById('btn-stl-rain').textContent='☂ STL Rain'; }
+  stlLibrary.forEach(item=>item.geometry.dispose());
+  stlLibrary=[]; selectedStlIdx=-1;
+  document.getElementById('stl-preview-wrap').style.display='none';
+  if(prevAnimId) cancelAnimationFrame(prevAnimId);
+  refreshStlLibrary(); setStlStatus('Library cleared');
+});
+
+// Patch the drag-drop mouseup handler to support STL items
+const _origMouseUp = document.onmouseup;
+document.addEventListener('mouseup', e => {
+  if(dragShape !== '__stl__') return;
+  if(e.target===canvas && selectedStlIdx >= 0){
+    const pt = worldPosAt(e, FLOOR_Y+1);
+    if(pt){
+      pt.y = FLOOR_Y + stlScale * 1.5;
+      spawnStlBody(pt, new THREE.Vector3(spawnVelX,spawnVelY,0), -1);
+      toast(`Placed ${stlLibrary[selectedStlIdx]?.name || 'STL'}`);
+    }
+  }
+  // dragShape cleared by the existing mouseup handler
+}, true); // capture so it fires before the existing handler resets dragShape
 
 // ── Seed ──
 setTimeout(()=>{
