@@ -711,22 +711,290 @@ const bodies   = [];
 const ragdolls = [];
 const userLinks= [];
 
+// ════════════════════════════════════════════════════════
+//  CONVEX HULL  (QuickHull 3D — compact iterative version)
+//  Returns Float32Array of unique support vertices (local space)
+// ════════════════════════════════════════════════════════
+function buildConvexHull(geometry){
+  // Extract unique vertices from geometry
+  const pos = geometry.attributes.position;
+  const EPS = 1e-6;
+  const pts = [];
+  const seen = new Map();
+  for(let i=0;i<pos.count;i++){
+    const x=+pos.getX(i).toFixed(5), y=+pos.getY(i).toFixed(5), z=+pos.getZ(i).toFixed(5);
+    const key=`${x},${y},${z}`;
+    if(!seen.has(key)){ seen.set(key,true); pts.push(new THREE.Vector3(x,y,z)); }
+  }
+  if(pts.length<4) return pts; // degenerate
+
+  // Use Three.js convex geometry approach — just keep unique verts as the hull
+  // For GJK we only need the support function which iterates all verts, so
+  // we can simplify: decimate to ≤256 points for performance while keeping shape
+  if(pts.length > 256){
+    // Spatially subsample: keep every Nth
+    const step = Math.ceil(pts.length/256);
+    const sub = [];
+    for(let i=0;i<pts.length;i+=step) sub.push(pts[i]);
+    // Also always keep extremes in 6 axis directions
+    const axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,1),
+                new THREE.Vector3(-1,0,0),new THREE.Vector3(0,-1,0),new THREE.Vector3(0,0,-1)];
+    for(const ax of axes){
+      let best=pts[0],bd=-Infinity;
+      for(const p of pts){ const d=p.dot(ax); if(d>bd){bd=d;best=p;} }
+      if(!sub.includes(best)) sub.push(best);
+    }
+    return sub;
+  }
+  return pts;
+}
+
+// GJK support function: furthest point in direction d (world-space)
+// hull = local verts, pos = world pos, quatInv = inverse quat of body
+const _gjkLocal = new THREE.Vector3();
+function support(hull, isSphere, radius, worldPos, quat, quatInv, dir){
+  if(isSphere){
+    // Sphere support: center + radius*dir
+    return worldPos.clone().addScaledVector(dir, radius);
+  }
+  // Transform dir into local space
+  _gjkLocal.copy(dir).applyQuaternion(quatInv);
+  let best=-Infinity, bx=0,by=0,bz=0;
+  for(const v of hull){
+    const d=v.x*_gjkLocal.x+v.y*_gjkLocal.y+v.z*_gjkLocal.z;
+    if(d>best){best=d;bx=v.x;by=v.y;bz=v.z;}
+  }
+  // Transform back to world space
+  const lv=new THREE.Vector3(bx,by,bz);
+  lv.applyQuaternion(quat);
+  lv.add(worldPos);
+  return lv;
+}
+
+// GJK — returns null if separated, or simplex array for EPA
+function gjk(hullA,spA,rA,posA,qA,qAi, hullB,spB,rB,posB,qB,qBi){
+  const simplex=[];
+
+  function minkDiff(d){
+    const nd=d.clone().negate();
+    const a=support(hullA,spA,rA,posA,qA,qAi,d).clone();
+    const b=support(hullB,spB,rB,posB,qB,qBi,nd).clone();
+    return a.sub(b);
+  }
+
+  let dir=new THREE.Vector3().subVectors(posB,posA);
+  if(dir.lengthSq()<1e-8) dir.set(1,0,0);
+  dir.normalize();
+
+  let pt=minkDiff(dir);
+  if(pt.dot(dir)<0) return null;
+  simplex.push(pt);
+  dir.negate();
+
+  for(let iter=0;iter<48;iter++){
+    if(dir.lengthSq()<1e-10) return null;
+    dir.normalize();
+    pt=minkDiff(dir);
+    if(pt.dot(dir)<0) return null;
+    simplex.push(pt);
+    if(doSimplex(simplex,dir)){
+      // Ensure 4 points for EPA
+      while(simplex.length<4){
+        const extra=minkDiff(new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize());
+        simplex.push(extra);
+      }
+      return simplex;
+    }
+  }
+  return null;
+}
+
+// GJK simplex evolution — sets dir toward origin, returns true if origin inside
+// s is mutated in place (array of Vector3 Minkowski diff points, newest last)
+function doSimplex(s,dir){
+  switch(s.length){
+    case 2: return lineCase(s,dir);
+    case 3: return triangleCase(s,dir);
+    case 4: return tetrahedronCase(s,dir);
+  }
+  return false;
+}
+
+function lineCase(s,dir){
+  const a=s[s.length-1], b=s[0];
+  const ab=new THREE.Vector3().subVectors(b,a);
+  const ao=a.clone().negate();
+  if(ab.dot(ao)>0){
+    dir.crossVectors(ab,ao).cross(ab);
+  } else {
+    s.length=1; s[0]=a;
+    dir.copy(ao);
+  }
+  return false;
+}
+
+function triangleCase(s,dir){
+  const a=s[2], b=s[1], c=s[0];
+  const ab=new THREE.Vector3().subVectors(b,a);
+  const ac=new THREE.Vector3().subVectors(c,a);
+  const ao=a.clone().negate();
+  const abc=new THREE.Vector3().crossVectors(ab,ac);
+
+  if(new THREE.Vector3().crossVectors(abc,ac).dot(ao)>0){
+    if(ac.dot(ao)>0){
+      s.length=2; s[0]=c; s[1]=a;
+      dir.crossVectors(ac,ao).cross(ac);
+    } else {
+      s.length=2; s[0]=b; s[1]=a;
+      return lineCase(s,dir);
+    }
+  } else if(new THREE.Vector3().crossVectors(ab,abc).dot(ao)>0){
+    s.length=2; s[0]=b; s[1]=a;
+    return lineCase(s,dir);
+  } else if(abc.dot(ao)>0){
+    dir.copy(abc);
+  } else {
+    // flip winding
+    s[0]=b; s[1]=c; s[2]=a;
+    dir.copy(abc.negate());
+  }
+  return false;
+}
+
+function tetrahedronCase(s,dir){
+  const a=s[3], b=s[2], c=s[1], d=s[0];
+  const ab=new THREE.Vector3().subVectors(b,a);
+  const ac=new THREE.Vector3().subVectors(c,a);
+  const ad=new THREE.Vector3().subVectors(d,a);
+  const ao=a.clone().negate();
+  const abc=new THREE.Vector3().crossVectors(ab,ac);
+  const acd=new THREE.Vector3().crossVectors(ac,ad);
+  const adb=new THREE.Vector3().crossVectors(ad,ab);
+  if(abc.dot(ao)>0){ s.length=3; s[0]=c; s[1]=b; s[2]=a; return triangleCase(s,dir); }
+  if(acd.dot(ao)>0){ s.length=3; s[0]=d; s[1]=c; s[2]=a; return triangleCase(s,dir); }
+  if(adb.dot(ao)>0){ s.length=3; s[0]=b; s[1]=d; s[2]=a; return triangleCase(s,dir); }
+  return true;
+}
+
+// EPA — Expanding Polytope Algorithm
+// Returns {normal, depth} — the minimum penetration vector
+function epa(hullA,spA,rA,posA,qA,qAi, hullB,spB,rB,posB,qB,qBi, simplex){
+
+  function minkSup(d){
+    const nd=d.clone().negate();
+    return support(hullA,spA,rA,posA,qA,qAi,d).clone()
+      .sub(support(hullB,spB,rB,posB,qB,qBi,nd));
+  }
+
+  // polytope as flat vertex array + face index triples
+  const verts = simplex.slice(0,4).map(v=>v.clone());
+  // initial 4 faces of the tetrahedron (CCW winding outward)
+  let faces = [
+    [0,1,2],[0,3,1],[0,2,3],[1,3,2]
+  ];
+
+  function faceNormal(f){
+    const a=verts[f[0]], b=verts[f[1]], c=verts[f[2]];
+    const n=new THREE.Vector3()
+      .crossVectors(new THREE.Vector3().subVectors(b,a), new THREE.Vector3().subVectors(c,a))
+      .normalize();
+    // ensure outward
+    if(n.dot(a)<0) n.negate();
+    return {n, d:Math.abs(n.dot(a))};
+  }
+
+  for(let iter=0;iter<48;iter++){
+    // find closest face to origin
+    let minD=Infinity, minIdx=0;
+    const faceData=faces.map((f,i)=>{ const fd=faceNormal(f); if(fd.d<minD){minD=fd.d;minIdx=i;} return fd; });
+    const closest=faceData[minIdx];
+
+    // support point in that direction
+    const p=minkSup(closest.n);
+    const newD=p.dot(closest.n);
+
+    if(newD-closest.d < 5e-4){
+      // Converged
+      return {normal:closest.n.clone(), depth:closest.d};
+    }
+
+    // Add p to vertices
+    const pIdx=verts.length;
+    verts.push(p);
+
+    // Find all faces visible from p and collect their edges
+    const edges=[];
+    const newFaces=[];
+    for(const f of faces){
+      const {n}=faceNormal(f);
+      if(n.dot(new THREE.Vector3().subVectors(p,verts[f[0]]))>0){
+        // visible — record edges
+        for(let e=0;e<3;e++){
+          edges.push([f[e],f[(e+1)%3]]);
+        }
+      } else {
+        newFaces.push(f);
+      }
+    }
+
+    // Remove shared edges (appear in both directions)
+    const uniqueEdges=[];
+    outer: for(const [a,b] of edges){
+      for(let i=0;i<uniqueEdges.length;i++){
+        if(uniqueEdges[i][0]===b&&uniqueEdges[i][1]===a){
+          uniqueEdges.splice(i,1); continue outer;
+        }
+      }
+      uniqueEdges.push([a,b]);
+    }
+
+    for(const [a,b] of uniqueEdges) newFaces.push([a,b,pIdx]);
+    faces=newFaces;
+    if(faces.length===0) break;
+  }
+
+  // fallback: return the closest face normal
+  let minD=Infinity, best={n:new THREE.Vector3(0,1,0),d:0.01};
+  for(const f of faces){
+    const fd=faceNormal(f);
+    if(fd.d<minD){minD=fd.d;best=fd;}
+  }
+  return {normal:best.n.clone(), depth:best.d};
+}
+
+// ════════════════════════════════════════════════════════
+//  PHYSBODY — now carries convex hull + full rotation state
+// ════════════════════════════════════════════════════════
 class PhysBody {
-  constructor(mesh, radius, mass=1) {
-    this.mesh    = mesh;
-    this.radius  = radius;
-    this.mass    = mass;
-    this.invMass = mass>0 ? 1/mass : 0;
-    this.vel     = new THREE.Vector3();
-    this.angVel  = new THREE.Vector3();
-    this.pinned  = false;
-    this.frozen  = false;
-    this.ragId   = -1;
-    this.trail   = null;
-    this.sleeping= false;
-    this.sleepTimer=0;
+  constructor(mesh, hull, isSphere, radius, mass=1) {
+    this.mesh      = mesh;
+    this.hull      = hull;      // array of THREE.Vector3 local-space verts (null for sphere)
+    this.isSphere  = isSphere;
+    this.radius    = radius;    // bounding/sphere radius
+    this.mass      = mass;
+    this.invMass   = mass>0 ? 1/mass : 0;
+    // Inertia tensor (simplified: uniform sphere inertia for all shapes — good enough for gameplay)
+    const I = (2/5)*mass*radius*radius;
+    this.invInertia = mass>0 ? 1/Math.max(I,0.0001) : 0;
+    this.vel       = new THREE.Vector3();
+    this.angVel    = new THREE.Vector3();
+    this.quat      = new THREE.Quaternion();   // orientation quaternion
+    this.quatInv   = new THREE.Quaternion();
+    this.pinned    = false;
+    this.frozen    = false;
+    this.ragId     = -1;
+    this.trail     = null;
+    this.sleeping  = false;
+    this.sleepTimer= 0;
+    // Sync initial quat from mesh
+    this.quat.copy(mesh.quaternion);
+    this.quatInv.copy(this.quat).invert();
   }
   get pos(){ return this.mesh.position; }
+  // Sync mesh orientation from physics quat
+  syncMeshQuat(){
+    this.mesh.quaternion.copy(this.quat);
+  }
 }
 
 // Trail
@@ -860,9 +1128,16 @@ function physicsStep(dt){
       b.vel.multiplyScalar(1-airDrag);
       b.angVel.multiplyScalar(.97);
       b.pos.addScaledVector(b.vel,sdt);
-      b.mesh.rotation.x+=b.angVel.x*sdt;
-      b.mesh.rotation.y+=b.angVel.y*sdt;
-      b.mesh.rotation.z+=b.angVel.z*sdt;
+
+      // Integrate orientation via quaternion
+      if(b.angVel.lengthSq()>1e-8){
+        const angle=b.angVel.length()*sdt;
+        const axis=b.angVel.clone().normalize();
+        const dq=new THREE.Quaternion().setFromAxisAngle(axis,angle);
+        b.quat.premultiply(dq).normalize();
+        b.quatInv.copy(b.quat).invert();
+        b.syncMeshQuat();
+      }
 
       // sleep check
       if(sleepEnabled){
@@ -904,56 +1179,166 @@ function physicsStep(dt){
       }
     }
 
-    // Floor / walls / ceiling collisions — gravity-aware
+    // Floor / walls / ceiling collisions — convex-hull aware
+    const _down=new THREE.Vector3(0,-1,0);
+    const _up  =new THREE.Vector3(0,1,0);
     for(let i=bodies.length-1;i>=0;i--){
       const b=bodies[i]; if(b.pinned) continue;
-      const r=b.radius;
 
-      if(floorOn && b.pos.y-r<FLOOR_Y){
-        b.pos.y=FLOOR_Y+r;
-        if(b.vel.y<0){ b.vel.y*=-bounce; b.vel.x*=friction; b.vel.z*=friction; }
-        b.angVel.multiplyScalar(friction);
-        if(Math.abs(b.vel.y)<.12) b.vel.y=0;
+      // Find lowest world-space point via support function in -Y direction
+      const lowestPt = support(b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv,_down);
+      const highestPt= support(b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv,_up);
+
+      if(floorOn && lowestPt.y < FLOOR_Y){
+        const pen = FLOOR_Y - lowestPt.y;
+        b.pos.y += pen;
+        if(b.vel.y<0){
+          // Contact point relative to center of mass
+          const rContact=lowestPt.clone().sub(b.pos);
+          rContact.y += pen; // after correction
+          const vn=b.vel.y;
+          const angContrib=b.angVel.clone().cross(rContact).y;
+          const vRel=vn+angContrib;
+          if(vRel<0){
+            const impN=-(1+bounce)*vRel/(b.invMass + b.invInertia*(rContact.x*rContact.x+rContact.z*rContact.z));
+            b.vel.y+=impN*b.invMass;
+            b.angVel.x-=impN*b.invInertia*rContact.z;
+            b.angVel.z+=impN*b.invInertia*rContact.x;
+          }
+          b.vel.x*=friction; b.vel.z*=friction;
+          b.angVel.multiplyScalar(friction);
+          if(Math.abs(b.vel.y)<.1) b.vel.y=0;
+        }
         if(b.sleeping) b.sleeping=false;
       }
-      if(ceilOn && b.pos.y+r>CEIL_Y){
-        b.pos.y=CEIL_Y-r;
+
+      if(ceilOn && highestPt.y > CEIL_Y){
+        b.pos.y -= (highestPt.y - CEIL_Y);
         if(b.vel.y>0){ b.vel.y*=-bounce; }
       }
+
       if(wallsOn){
-        if(b.pos.x-r<-HALF){b.pos.x=-HALF+r; if(b.vel.x<0)b.vel.x*=-bounce;}
-        if(b.pos.x+r> HALF){b.pos.x= HALF-r; if(b.vel.x>0)b.vel.x*=-bounce;}
-        if(b.pos.z-r<-HALF){b.pos.z=-HALF+r; if(b.vel.z<0)b.vel.z*=-bounce;}
-        if(b.pos.z+r> HALF){b.pos.z= HALF-r; if(b.vel.z>0)b.vel.z*=-bounce;}
+        const pxP=support(b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv,new THREE.Vector3(1,0,0));
+        const pxN=support(b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv,new THREE.Vector3(-1,0,0));
+        const pzP=support(b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv,new THREE.Vector3(0,0,1));
+        const pzN=support(b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv,new THREE.Vector3(0,0,-1));
+        if(pxN.x<-HALF){ b.pos.x+=(-HALF-pxN.x); if(b.vel.x<0){b.vel.x*=-bounce;} }
+        if(pxP.x> HALF){ b.pos.x-=(pxP.x-HALF);  if(b.vel.x>0){b.vel.x*=-bounce;} }
+        if(pzN.z<-HALF){ b.pos.z+=(-HALF-pzN.z);  if(b.vel.z<0){b.vel.z*=-bounce;} }
+        if(pzP.z> HALF){ b.pos.z-=(pzP.z-HALF);   if(b.vel.z>0){b.vel.z*=-bounce;} }
       }
+
       if(b.pos.y<FLOOR_Y-100||(wallsOn&&(Math.abs(b.pos.x)>HALF+5||Math.abs(b.pos.z)>HALF+5))){
         removeBodyAt(i); updateStats(); continue;
       }
       if(b.trail) b.trail.update(b.pos);
     }
 
-    // Body–body collisions
+    // Body–body collisions — GJK + EPA convex hull
     for(let i=0;i<bodies.length;i++){
       for(let j=i+1;j<bodies.length;j++){
         const a=bodies[i],b=bodies[j];
         if(a.ragId>=0&&a.ragId===b.ragId) continue;
         if(a.sleeping&&b.sleeping) continue;
+
+        // Broad phase: bounding sphere check
         const d=new THREE.Vector3().subVectors(a.pos,b.pos);
-        const dist=d.length(),minD=a.radius+b.radius;
-        if(dist<minD&&dist>.001){
-          const n=d.divideScalar(dist),ov=(minD-dist)*.5;
-          const sumInv=a.invMass+b.invMass;
-          if(!a.pinned&&!a.frozen) a.pos.addScaledVector(n,ov*2*(a.invMass/sumInv));
-          if(!b.pinned&&!b.frozen) b.pos.addScaledVector(n,-ov*2*(b.invMass/sumInv));
-          const rv=a.vel.dot(n)-b.vel.dot(n);
-          if(rv<0){
-            const imp=rv*(-(1+bounce))/sumInv;
-            if(!a.pinned&&!a.frozen) a.vel.addScaledVector(n, imp*a.invMass);
-            if(!b.pinned&&!b.frozen) b.vel.addScaledVector(n,-imp*b.invMass);
-          }
-          if(a.sleeping) a.sleeping=false;
-          if(b.sleeping) b.sleeping=false;
+        const bdist=d.length();
+        if(bdist > a.radius+b.radius+0.01) continue;
+
+        // Narrow phase: GJK → EPA
+        let normal, depth;
+        if(a.isSphere && b.isSphere){
+          // Sphere-sphere fast path
+          if(bdist<1e-4){ normal=new THREE.Vector3(1,0,0); depth=a.radius+b.radius; }
+          else{ normal=d.clone().divideScalar(bdist); depth=a.radius+b.radius-bdist; }
+          if(depth<=0) continue;
+        } else {
+          // GJK test
+          const sim=gjk(
+            a.hull,a.isSphere,a.radius,a.pos,a.quat,a.quatInv,
+            b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv
+          );
+          if(!sim) continue;
+          // EPA to find penetration
+          const epaRes=epa(
+            a.hull,a.isSphere,a.radius,a.pos,a.quat,a.quatInv,
+            b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv,
+            sim
+          );
+          normal=epaRes.normal; depth=epaRes.depth;
+          if(depth<=0||isNaN(depth)) continue;
+          // normal should point from b to a
+          if(normal.dot(d)<0) normal.negate();
         }
+
+        // Position correction (split by inverse mass)
+        const sumInv=a.invMass+b.invMass;
+        if(sumInv<1e-8) continue;
+        const corr=depth/sumInv;
+        if(!a.pinned&&!a.frozen) a.pos.addScaledVector(normal, corr*a.invMass);
+        if(!b.pinned&&!b.frozen) b.pos.addScaledVector(normal,-corr*b.invMass);
+
+        // Contact point (midpoint of overlap, approximate)
+        const contactA = support(a.hull,a.isSphere,a.radius,a.pos,a.quat,a.quatInv, normal.clone().negate());
+        const contactB = support(b.hull,b.isSphere,b.radius,b.pos,b.quat,b.quatInv, normal.clone());
+        const contact  = contactA.clone().add(contactB).multiplyScalar(0.5);
+
+        // Relative velocity at contact point (including angular)
+        const rA=contact.clone().sub(a.pos);
+        const rB=contact.clone().sub(b.pos);
+        const vA=a.vel.clone().add(new THREE.Vector3().crossVectors(a.angVel,rA));
+        const vB=b.vel.clone().add(new THREE.Vector3().crossVectors(b.angVel,rB));
+        const vRel=vA.sub(vB);
+        const vRelN=vRel.dot(normal);
+
+        if(vRelN>0) continue; // already separating
+
+        // Impulse with angular contribution
+        const rAxN=rA.clone().cross(normal);
+        const rBxN=rB.clone().cross(normal);
+        const angTermA=a.invInertia*(rAxN.clone().cross(rA).dot(normal));
+        const angTermB=b.invInertia*(rBxN.clone().cross(rB).dot(normal));
+        const denom=sumInv+angTermA+angTermB;
+        if(denom<1e-8) continue;
+        const impMag=-(1+bounce)*vRelN/denom;
+
+        const imp=normal.clone().multiplyScalar(impMag);
+        if(!a.pinned&&!a.frozen){
+          a.vel.addScaledVector(imp, a.invMass);
+          a.angVel.addScaledVector(rA.clone().cross(imp), a.invInertia);
+        }
+        if(!b.pinned&&!b.frozen){
+          b.vel.addScaledVector(imp,-b.invMass);
+          b.angVel.addScaledVector(rB.clone().cross(imp),-b.invInertia);
+        }
+
+        // Friction impulse (tangential)
+        const tangent=vRel.clone().addScaledVector(normal,-vRel.dot(normal)).normalize();
+        if(tangent.lengthSq()>1e-8){
+          const vRelT=vRel.dot(tangent);
+          const rAxT=rA.clone().cross(tangent);
+          const rBxT=rB.clone().cross(tangent);
+          const angTA=a.invInertia*rAxT.clone().cross(rA).dot(tangent);
+          const angTB=b.invInertia*rBxT.clone().cross(rB).dot(tangent);
+          const denomT=sumInv+angTA+angTB;
+          if(denomT>1e-8){
+            const frMax=(1-friction)*Math.abs(impMag);
+            const frImp=Math.max(-frMax,Math.min(frMax,-vRelT/denomT));
+            const fImp=tangent.clone().multiplyScalar(frImp);
+            if(!a.pinned&&!a.frozen){
+              a.vel.addScaledVector(fImp, a.invMass);
+              a.angVel.addScaledVector(rA.clone().cross(fImp), a.invInertia);
+            }
+            if(!b.pinned&&!b.frozen){
+              b.vel.addScaledVector(fImp,-b.invMass);
+              b.angVel.addScaledVector(rB.clone().cross(fImp),-b.invInertia);
+            }
+          }
+        }
+
+        if(a.sleeping) a.sleeping=false;
+        if(b.sleeping) b.sleeping=false;
       }
     }
   }
@@ -996,12 +1381,15 @@ function makeGeo(shape,s){
     case 'icosa':       return new THREE.IcosahedronGeometry(.55*s,0);
     case 'octahedron':  return new THREE.OctahedronGeometry(.55*s,0);
     case 'tetrahedron': return new THREE.TetrahedronGeometry(.55*s,0);
-    case 'capsule': {
-      // approximated with SphereGeometry
-      return new THREE.SphereGeometry(.45*s,14,14);
-    }
-    default: return new THREE.SphereGeometry(.5*s,14,14);
+    case 'capsule':     return new THREE.SphereGeometry(.45*s,14,14);
+    default:            return new THREE.SphereGeometry(.5*s,14,14);
   }
+}
+
+// Compute bounding sphere radius of geometry
+function geoBoundingRadius(geo){
+  geo.computeBoundingSphere();
+  return geo.boundingSphere ? geo.boundingSphere.radius : 0.5;
 }
 
 function spawnBody(pos,vel,shape,hexColor,scale=1,mass=1,opts={}){
@@ -1017,12 +1405,24 @@ function spawnBody(pos,vel,shape,hexColor,scale=1,mass=1,opts={}){
     opacity:(opts.ghost??ghostMode)?0.4:1.0,
     side:(opts.ghost??ghostMode)?THREE.DoubleSide:THREE.FrontSide
   });
-  const mesh=new THREE.Mesh(makeGeo(shape,scale),mat);
+  const geo = makeGeo(shape,scale);
+  const mesh=new THREE.Mesh(geo,mat);
   mesh.castShadow=!wireframe; mesh.receiveShadow=true;
   mesh.position.copy(pos);
-  mesh.rotation.set(Math.random()*Math.PI*2,Math.random()*Math.PI*2,Math.random()*Math.PI*2);
+  // random initial rotation
+  const initQ=new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(Math.random()*Math.PI*2,Math.random()*Math.PI*2,Math.random()*Math.PI*2)
+  );
+  mesh.quaternion.copy(initQ);
   scene.add(mesh);
-  const b=new PhysBody(mesh,.5*scale*(shape==='torus'?1.2:1),mass);
+
+  const isSphere = (shape==='sphere'||shape==='capsule');
+  const hull = isSphere ? null : buildConvexHull(geo);
+  const radius = geoBoundingRadius(geo);
+
+  const b=new PhysBody(mesh, hull, isSphere, radius, mass);
+  b.quat.copy(initQ);
+  b.quatInv.copy(initQ).invert();
   b.vel.copy(vel);
   b.angVel.set((Math.random()-.5)*6,(Math.random()-.5)*6,(Math.random()-.5)*6);
   if(trailsEnabled) b.trail=new Trail(hexColor);
@@ -1104,7 +1504,7 @@ function spawnRagdoll(origin,opts={}){
     const mat=new THREE.MeshBasicMaterial({visible:false});
     const mesh=new THREE.Mesh(geo,mat);
     mesh.position.copy(pos); scene.add(mesh);
-    const b=new PhysBody(mesh,r,m);
+    const b=new PhysBody(mesh, null, true, r, m); // ragdoll nodes are spheres
     b.ragId=id; b.isLimb=true;
     bodies.push(b); nb[name]=b;
   }
@@ -1283,7 +1683,7 @@ canvas.addEventListener('mousedown',e=>{
   const b=hitBody(e); if(!b) return;
   lastHitBody=b;
   if(activeTool==='grab'){
-    grabBody=b; b.vel.set(0,0,0); grabVel.set(0,0,0);
+    grabBody=b; b.vel.set(0,0,0); b.angVel.set(0,0,0); grabVel.set(0,0,0);
     const cd=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
     grabPlane.setFromNormalAndCoplanarPoint(cd,b.pos);
     canvas.style.cursor='grabbing';
@@ -2007,9 +2407,12 @@ function processSTLFile(file) {
       normalizeGeometry(geo); // normalize to unit sphere, scale applied at spawn
       if (stlSmooth) geo.computeVertexNormals();
 
+      // Pre-build convex hull for collision (cached once, reused per spawn)
+      const hull = buildConvexHull(geo);
+
       progBar.style.width = '100%';
       const name = file.name.replace(/\.stl$/i,'');
-      stlLibrary.push({ name, geometry: geo, triCount, byteSize: e.target.result.byteLength });
+      stlLibrary.push({ name, geometry: geo, hull, triCount, byteSize: e.target.result.byteLength });
       selectedStlIdx = stlLibrary.length - 1;
       refreshStlLibrary();
       renderPreview(geo.clone());
@@ -2042,7 +2445,10 @@ function spawnStlBody(pos, vel, itemIdx) {
   const mesh = new THREE.Mesh(geoClone, mat);
   mesh.castShadow = true; mesh.receiveShadow = true;
   mesh.position.copy(pos);
-  mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
+  const initQ=new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(Math.random()*Math.PI*2,Math.random()*Math.PI*2,Math.random()*Math.PI*2)
+  );
+  mesh.quaternion.copy(initQ);
   scene.add(mesh);
 
   // Wireframe overlay
@@ -2052,9 +2458,14 @@ function spawnStlBody(pos, vel, itemIdx) {
     mesh.add(wireMesh);
   }
 
-  const rawRadius = computeBoundingRadius(geoClone);
+  // Build convex hull from the scaled geometry
+  const hull = buildConvexHull(geoClone);
+  const rawRadius = geoBoundingRadius(geoClone);
   const radius = Math.max(rawRadius, 0.05) * stlProxyScale;
-  const b = new PhysBody(mesh, radius, stlMass);
+
+  const b = new PhysBody(mesh, hull, false, radius, stlMass);
+  b.quat.copy(initQ);
+  b.quatInv.copy(initQ).invert();
   b.vel.copy(vel);
   b.angVel.set((Math.random()-.5)*5,(Math.random()-.5)*5,(Math.random()-.5)*5);
   b.isStl = true;
